@@ -4,7 +4,7 @@ from typing import List, Dict
 from dash.dependencies import State
 from rpy2.robjects import pandas2ri
 
-from MyCustomReviewers.AppComponents.ACustomAppComponent import gen_custom_app_component
+from SNVReviewers.AppComponents.DIGAppComponent import gen_dig_report_app_component
 
 from AnnoMate.Data import DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp
@@ -37,8 +37,8 @@ class SNVReviewer(ReviewerTemplate):
                            history_df=history_df)
 
     def gen_review_app(self,
-                       sample_info_cols,
-                       acs_col,
+                    #    sample_info_cols,
+                    #    acs_col,
                        csize=None,
                        step_size=None
                        ) -> ReviewDataApp:
@@ -57,7 +57,7 @@ class SNVReviewer(ReviewerTemplate):
         app = ReviewDataApp()
         
         app.add_component(
-            gen_custom_app_component(), 
+            gen_dig_report_app_component(),
         )
 
         return app
@@ -66,7 +66,8 @@ class SNVReviewer(ReviewerTemplate):
         """
         self.add_autofill(<button name>, State('<id in layout>', 'attribute of object'), <annot name>)
         """
-        pass
+        self.add_autofill('Hello World', State('dig-annotation-value1', 'children'), 'Annotation 1')
+        self.add_autofill('Hello World 2', State('dig-annotation-value2', 'children'), 'Annotation 2')
 
     def set_default_review_data_annotations(self):
         """
@@ -75,13 +76,26 @@ class SNVReviewer(ReviewerTemplate):
             review_data_annotation=DataAnnotation('float')
         )
         """
-        pass
-
+        self.add_review_data_annotation(
+            annot_name='Annotation 1',
+            review_data_annotation=DataAnnotation('float'))
+        self.add_review_data_annotation(
+            annot_name='Annotation 2',
+            review_data_annotation=DataAnnotation('float'))
 
     def set_default_review_data_annotations_app_display(self):
         """
         self.add_annotation_display_component(<annot name>, NumberAnnotationDisplay())
         """
-        pass
-        
-        
+        self.add_annotation_display_component('Annotation 1', NumberAnnotationDisplay())
+        self.add_annotation_display_component('Annotation 2', NumberAnnotationDisplay())        
+    
+
+# the dropdown annotation table will be each gene from the dig report
+    # make sure the dataframe index is set to the gene (
+# in the dig app component then connect the selected row to the gene selected in the table
+    # select a gene in the dropdown (gene dropdown idx is the input)
+        # loads the default table
+        # once you select a new gene the table should update the selected row to that gene idx
+
+# push the data!!
