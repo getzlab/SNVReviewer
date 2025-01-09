@@ -34,6 +34,11 @@ setuptools.setup(
                         'cnv_suite',
                         'numpy==1.26.0',
                         'firecloud-dalmatian',
-                        'jupyter'
+                        'jupyter',
+                        'statsmodels',
+                        'scipy',
+                        # 'git+https://github.com/getzlab/dig_TOOL.git',
+                        'git+https://github.com/getzlab/MutationReviewer.git'
+
                        ]
 )   
