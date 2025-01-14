@@ -14,18 +14,18 @@ import numpy as np
 import scipy as sp
 # from statsmodels.stats.multitest import fdrcorrection
 
-# # minimum number of rows (genes) to display in the table
-# n_rows_min = 50
-# # horizontal buffer for the scatter plots
-# hor_buffer = 0.01
+# minimum number of rows (genes) to display in the table
+n_rows_min = 50
+# horizontal buffer for the scatter plots
+hor_buffer = 0.01
 # vertical gap between gene labels and scatter points
 y_gap_annot = 0.01
-# # buffer for the number of rows in the table
-# n_rows_buffer = 0.5
-# # maximum value along the vertical axis for the volcano and Q-Q plots
-# ymax = 16
-# # beta confidence interval
-# ci = 0.95
+# buffer for the number of rows in the table
+n_rows_buffer = 0.5
+# maximum value along the vertical axis for the volcano and Q-Q plots
+ymax = 16
+# beta confidence interval
+ci = 0.95
 
 # # properties of significant points
 # col_sig = 'rgba(255, 0, 0, 1)'
@@ -77,10 +77,10 @@ mut_type = {
     'Indels': 'INDEL',
     'SNVs': 'SNV'
 }
-# scatterpoint_type = {
-#     "Uniform P-mid": "unif",
-#     "P-mid": "recalc"
-# }
+scatterpoint_type = {
+    "Uniform P-mid": "unif",
+    "P-mid": "recalc"
+}
 # display_bounds_type = {
 #     'Yes': True,
 #     'No': False
@@ -144,10 +144,19 @@ mutation_type = {
     'Splice site SNVs': 'SPL',
     'Synonymous SNVs': 'SYN',
 }
-scatterpoint_type = {
-    "Uniform P-mid": "unif",
-    "P-mid": "recalc"
-}
+
+# not used for the coding report results
+# mutation_type = {
+#     'Indels + SNVs': 'MUT',
+#     'Indels': 'INDEL',
+#     'SNVs': 'SNV'
+# }
+
+# not used for the coding region plot generation
+# scatterpoint_type = {
+#     "Uniform P-mid": "unif",
+#     "P-mid": "recalc"
+# }
 display_bounds_type = {
     'Yes': True,
     'No': False
@@ -208,6 +217,7 @@ def generate_dig_report_dataframe(path_to_dig_results, alp=0.1):
     muts_ts = list(mutation_type.values())
 
     if 'EXP_INDEL' in df.columns:
+
         # Adding new columns for Non-synonymous SNVs + Indels
         df['OBS_MUT'] = df['OBS_NONSYN'] + df['OBS_INDEL']
         df['EXP_MUT'] = df['EXP_NONSYN'] + df['EXP_INDEL']
@@ -803,8 +813,11 @@ def generate_dig_report_plots(df):
     # prepare plot data for all combinations of mut_type and burden_type dropdown options
     plot_data = {}
     for mut_key, mut_val in mut_type.items():
+
         for bur_key, bur_val in burden_plot_type.items():
+
             for display_bounds_key, display_bounds_val in display_bounds_type.items():
+
                 for scatterpoint_key, scatterpoint_val in scatterpoint_type.items():
                     for display_labels_key, display_labels_val in display_labels_type.items():
                         if not (mut_key in ['Indels', 'Indels + SNVs'] and bur_key == 'Sample-wise'):
@@ -820,7 +833,7 @@ def generate_dig_report_plots(df):
                             ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
 
                             qq_fig = go.Figure()
-                            
+
                             for i in range(len(result_types)):
                                 ind = test_dom == result_types[i]
                                 marker_i = markers[result_types[i]][1]

@@ -86,6 +86,9 @@ def gen_dig_app_component_data_internal_callback(
     # )
     qq_fig, table_fig = generate_dig_report_plots(dig_df)
 
+    # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE   
+    dig_df = dig_df[:500]
+
 
     # wrap up the precalled purity 
 
