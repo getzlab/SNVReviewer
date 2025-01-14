@@ -26,7 +26,7 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.utils import generate_dig_report
+from SNVReviewers.AppComponents.utils import generate_dig_report_plots, generate_plot_data
 
 DIG_REPORT_COLUMN_NAMES = ["GENE", "CHROM", "GENE_LENGTH", "PVAL", "FDR", "OBS", "EXP", "MU", "SIGMA", ""]
                         # [
@@ -72,15 +72,19 @@ def gen_dig_app_component_data_internal_callback(
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
     debugging_component = "" + str(type(data.df["snv_data"]))
     dig_output_type = "Combined"
+    display_bounds = True # whether to display the bounds
     
     dir_output = "./example_notebooks/data/dig_data"
     dig_figure = go.Figure()
+    qq_fig = go.Figure()
 
+    # do not need to run this because the dig report data is already generated
     # generate_dig_report(
     #     dig_df,
     #     dig_output_type,
     #     dir_output,
     # )
+    qq_fig, table_fig = generate_dig_report_plots(dig_df)
 
 
     # wrap up the precalled purity 
@@ -88,7 +92,7 @@ def gen_dig_app_component_data_internal_callback(
     return [
             dig_df.to_dict('records'),
             dig_type_selection,
-            dig_figure,
+            qq_fig,
             debugging_component,
             ]
 
@@ -178,7 +182,7 @@ def gen_dig_app_component_layout():
                 ]),
 
                 # creates the dig QQ plot
-                dcc.Graph(id='dig-graph', figure={}),
+                dcc.Graph(id='dig-qq-graph', figure={}),
             ]),
 
             html.Div(
@@ -239,7 +243,7 @@ def gen_dig_report_app_component():
         callback_output=[
             Output('dig-report-coding-table', 'data'),
             Output('dig-report-type-label', 'children'),
-            Output('dig-graph', 'figure'),
+            Output('dig-qq-graph', 'figure'),
             Output('debugging', 'children'),
         ],
     )
