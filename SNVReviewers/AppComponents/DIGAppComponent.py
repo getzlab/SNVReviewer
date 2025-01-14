@@ -89,6 +89,57 @@ def gen_dig_app_component_data_internal_callback(
     # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE   
     dig_df = dig_df[:500]
 
+    # rename the columns of the dig_df from FDR_SNV_unif -> FDR, to this for all the columns DIG_REPORT_COLUMN_NAMES
+        # the actual dig_df has different column names
+
+    # PVAL_coding_SNV_recalc	
+    # PVAL_coding_SNV_unif	
+    # PVAL_coding_SNV_lower	
+    # PVAL_coding_SNV_upper	
+    # PVAL_coding_SNV_SAMPLE_recalc	
+    # PVAL_coding_SNV_SAMPLE_unif	
+    # PVAL_coding_SNV_SAMPLE_lower	
+    # PVAL_coding_SNV_SAMPLE_upper	
+    # PVAL_coding_INDEL_recalc	
+    # PVAL_coding_INDEL_unif	
+    # PVAL_coding_INDEL_lower	
+    # PVAL_coding_INDEL_upper	
+    # PVAL_coding_MUT_recalc	
+    # PVAL_coding_MUT_unif	
+    # PVAL_coding_MUT_lower	
+    # PVAL_coding_MUT_upper	
+    # SIZE_promoter	
+    # PVAL_promoter_SNV_recalc	
+    # PVAL_promoter_SNV_unif	
+    # PVAL_promoter_SNV_lower	
+    # PVAL_promoter_SNV_upper	
+    # PVAL_promoter_SNV_SAMPLE_recalc	
+    # PVAL_promoter_SNV_SAMPLE_unif	
+    # PVAL_promoter_SNV_SAMPLE_lower	
+    # PVAL_promoter_SNV_SAMPLE_upper	
+    # PVAL_promoter_INDEL_recalc	
+    # PVAL_promoter_INDEL_unif	
+    # PVAL_promoter_INDEL_lower	
+    # PVAL_promoter_INDEL_upper	
+    # PVAL_promoter_MUT_recalc	
+    # PVAL_promoter_MUT_unif	
+    # PVAL_promoter_MUT_lower	
+    # PVAL_promoter_MUT_upper	
+    # SIZE_5utr	
+    # PVAL_5utr_SNV_recalc	
+    # PVAL_5utr_SNV_unif	PVAL_5utr_SNV_lower	PVAL_5utr_SNV_upper	PVAL_5utr_SNV_SAMPLE_recalc	PVAL_5utr_SNV_SAMPLE_unif	
+    # PVAL_5utr_SNV_SAMPLE_lower	PVAL_5utr_SNV_SAMPLE_upper	PVAL_5utr_INDEL_recalc	PVAL_5utr_INDEL_unif	
+    # PVAL_5utr_INDEL_lower	PVAL_5utr_INDEL_upper	PVAL_5utr_MUT_recalc	PVAL_5utr_MUT_unif	PVAL_5utr_MUT_lower	
+    # PVAL_5utr_MUT_upper	SIZE_3utr	PVAL_3utr_SNV_recalc	PVAL_3utr_SNV_unif	PVAL_3utr_SNV_lower	PVAL_3utr_SNV_upper	
+    # PVAL_3utr_SNV_SAMPLE_recalc	PVAL_3utr_SNV_SAMPLE_unif	PVAL_3utr_SNV_SAMPLE_lower	PVAL_3utr_SNV_SAMPLE_upper	
+    # PVAL_3utr_INDEL_recalc	PVAL_3utr_INDEL_unif	PVAL_3utr_INDEL_lower	PVAL_3utr_INDEL_upper	PVAL_3utr_MUT_recalc	
+    # PVAL_3utr_MUT_unif	PVAL_3utr_MUT_lower	PVAL_3utr_MUT_upper	PVAL_SNV_recalc	FDR_SNV_recalc	PVAL_SNV_unif	FDR_SNV_unif	
+    # PVAL_SNV_lower	FDR_SNV_lower	PVAL_SNV_upper	FDR_SNV_upper	PVAL_INDEL_recalc	FDR_INDEL_recalc	PVAL_INDEL_unif	
+    # FDR_INDEL_unif	PVAL_INDEL_lower	FDR_INDEL_lower	PVAL_INDEL_upper	FDR_INDEL_upper	PVAL_MUT_recalc	FDR_MUT_recalc	
+    # PVAL_MUT_unif	FDR_MUT_unif	PVAL_MUT_lower	FDR_MUT_lower	PVAL_MUT_upper	FDR_MUT_upper	PVAL_SNV_SAMPLE_recalc	
+    # FDR_SNV_SAMPLE_recalc	PVAL_SNV_SAMPLE_unif	FDR_SNV_SAMPLE_unif	PVAL_SNV_SAMPLE_lower	FDR_SNV_SAMPLE_lower	
+    # PVAL_SNV_SAMPLE_upper	FDR_SNV_SAMPLE_upper	CGC	PANCAN
+
 
     # wrap up the precalled purity 
 
@@ -163,7 +214,9 @@ def gen_dig_app_component_layout():
                     {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
                     {'label': 'Indels', 'value': 'indels'},
                     {'label': 'SNVs', 'value': 'snvs'}
-                ]),
+                ],
+                value='indels_snvs'
+                ),
 
 
                 # dropdown for selecting burden type
@@ -173,7 +226,9 @@ def gen_dig_app_component_layout():
                 options=[
                     {'label': 'Total', 'value': 'total'},
                     {'label': 'Sample-wise', 'value': 'sample_wise'}
-                ]),
+                ],
+                value='total'
+                ),
 
                 # dropdown for selecting burden type
                 dbc.Label("P-value Type"),
@@ -182,7 +237,8 @@ def gen_dig_app_component_layout():
                 options=[
                     {'label': 'Uniform P-mid', 'value': 'uniform_p_mid'},
                     {'label': 'P-mid', 'value': 'p_mid'},
-                ]),
+                ],
+                value='uniform_p_mid'),
 
                 # creates the dig QQ plot
                 dcc.Graph(id='dig-qq-graph', figure={}),

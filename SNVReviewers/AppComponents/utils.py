@@ -718,6 +718,9 @@ def reformat_numbers(df, cols, form='{:.2E}'):
 #               'w') as f:
 #         f.write(html_content)
 
+
+
+# Make all the markers the same, i.e. don't have the dominant region, make sure to redownload the code from the google drive
 def generate_plot_data(df, mut, bur, display_bounds, scatterpoint):
     """
     Given a mutation type and a burden type, generate the data for the volcano plot, Q-Q plot, and table plot
@@ -734,6 +737,7 @@ def generate_plot_data(df, mut, bur, display_bounds, scatterpoint):
     col_pvals = ['PVAL_' + rt + '_' + col_chosen for rt in result_types]
     col_sizes = ['SIZE_' + rt  for rt in result_types]
     cols_kept = ['GENE', 'CHROM'] + col_pvals + col_sizes + ['PVAL_' + col_chosen] + ['FDR_' + col_chosen] + ['CGC', 'PANCAN']
+    
     if display_bounds:
         cols_bound = ['PVAL_' + '_'.join(col_chosen.split('_')[:-1]) + '_' + typ for typ in ['lower', 'upper']]
         df_kept = df_comb[cols_kept + cols_bound].sort_values(by='PVAL_' + col_chosen, ignore_index=True)
