@@ -48,8 +48,10 @@ ci = 0.95
 # # properties of the bar plot
 # col_bar = 'gray'
 # opac_bar = 0.8
+
 # color of beta confidence area
 col_beta = 'rgba(128, 128, 128, 0.2)'
+
 # # text for the special case when Sample-wise case does not exist
 # text_special = 'Sample-wise case does not exist for Indels and Indels + SNVs!'
 
@@ -72,19 +74,12 @@ burden_plot_type = {
     'Sample-wise': 'SAMPLE',
 }
 result_types = ['coding', 'promoter', '5utr', '3utr']
-mut_type = {
-    'Indels + SNVs': 'MUT',
-    'Indels': 'INDEL',
-    'SNVs': 'SNV'
-}
+
 scatterpoint_type = {
-    "Uniform P-mid": "unif",
-    "P-mid": "recalc"
+    "uniform_p_mid": "unif",
+    "p_mid": "recalc"
 }
-# display_bounds_type = {
-#     'Yes': True,
-#     'No': False
-# }
+
 display_labels_type = {
     'Yes': True,
     'No': False
@@ -123,17 +118,20 @@ opac_err = 0.3
 col_bar = 'gray'
 opac_bar = 0.8
 # text for the special case when Sample-wise case does not exist
-text_special = 'Sample-wise case does not exist for Indels and Indels + Nonsynonymous SNVs!'
+SPECIAL_TEXT = 'Sample-wise case does not exist for Indels and Indels + Nonsynonymous SNVs!'
 
 # derived parameters
 col_err_sig = ','.join(col_sig.split(',')[:-1]) + ', {})'.format(opac_err)
 col_err_nonsig = ','.join(col_nonsig.split(',')[:-1]) + ', {})'.format(opac_err)
 
+
+
 # dictionaries for the two dropdowns
 burden_type = {
-    'Total': 'BURDEN',
-    'Sample-wise': 'BURDEN_SAMPLE',
+    'total': 'BURDEN',
+    'sample_wise': 'BURDEN_SAMPLE',
 }
+
 mutation_type = {
     'Indels + Nonsynonymous SNVs': 'MUT',
     'Indels': 'INDEL',
@@ -145,18 +143,13 @@ mutation_type = {
     'Synonymous SNVs': 'SYN',
 }
 
-# not used for the coding report results
-# mutation_type = {
-#     'Indels + SNVs': 'MUT',
-#     'Indels': 'INDEL',
-#     'SNVs': 'SNV'
-# }
+# used for generating the Combined QQ plot
+mut_type = {
+    'indels_snvs': 'MUT',
+    'indels': 'INDEL',
+    'snvs': 'SNV'
+}
 
-# not used for the coding region plot generation
-# scatterpoint_type = {
-#     "Uniform P-mid": "unif",
-#     "P-mid": "recalc"
-# }
 display_bounds_type = {
     'Yes': True,
     'No': False
@@ -749,6 +742,7 @@ def generate_plot_data(df, mut, bur, display_bounds, scatterpoint):
     df_kept['RANK'] = df_kept.index + 1
     pvals = df_kept['PVAL_' + col_chosen].to_numpy()
     labels = df_kept['GENE'].to_numpy()
+
     # Determine dominant result type
     test_dom = df_kept[col_pvals].idxmin(axis=1).str.split('_', expand=True)[1].to_numpy()
 
@@ -812,197 +806,211 @@ def generate_plot_data(df, mut, bur, display_bounds, scatterpoint):
 
     return df_kept, pvals, pval_bounds, labels, test_dom, ind_sig, table_fig
 
-def generate_dig_report_plots(df):
+def generate_dig_report_plots(df, mut_key, bur_key, display_bounds_key, display_labels_key, scatterpoint_key):
 
     # prepare plot data for all combinations of mut_type and burden_type dropdown options
     plot_data = {}
-    for mut_key, mut_val in mut_type.items():
+    # for mut_key, mut_val in mut_type.items():
 
-        for bur_key, bur_val in burden_plot_type.items():
+    #     for bur_key, bur_val in burden_plot_type.items():
 
-            for display_bounds_key, display_bounds_val in display_bounds_type.items():
+    #         for display_bounds_key, display_bounds_val in display_bounds_type.items():
 
-                for scatterpoint_key, scatterpoint_val in scatterpoint_type.items():
-                    for display_labels_key, display_labels_val in display_labels_type.items():
-                        if not (mut_key in ['Indels', 'Indels + SNVs'] and bur_key == 'Sample-wise'):
-                            _, pvals, pval_bounds, labels, test_dom, ind_sig, table_fig = generate_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
-
-                            # Q-Q Plot
-                            # Scatter plots
-                            x = -np.log10(np.arange(1, len(pvals) + 1) / (len(pvals) + 1))
-                            y = -np.log10(pvals)
-                            ind_capped = y > ymax
-                            ind_ncapped = np.logical_and(ind_sig, ~ind_capped)
-                            ind_nonsig = ~ind_sig
-                            ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
-
-                            qq_fig = go.Figure()
-
-                            for i in range(len(result_types)):
-                                ind = test_dom == result_types[i]
-                                marker_i = markers[result_types[i]][1]
-                                i_nonsig = np.logical_and(ind, ind_nonsig)
-                                i_ncapped = np.logical_and(ind, ind_ncapped)
-                                i_capped = np.logical_and(ind, ind_capped)
-
-                                labels_capped = labels[i_capped].tolist()
-                                x_capped = x[i_capped].tolist()
-                                y_capped = y[i_capped].tolist()
-                                x_ncapped = x[i_ncapped].tolist()
-                                y_ncapped = y[i_ncapped].tolist()
-                                x_nonsig = x[i_nonsig].tolist()
-                                y_nonsig = y[i_nonsig].tolist()
-                                if display_bounds_val:
-                                    y_upper = -np.log10(pval_bounds[:, 0]) - y
-                                    y_lower = y + np.log10(pval_bounds[:, 1])
-                                    y_upper_ncapped = y_upper[i_ncapped].tolist()
-                                    y_lower_ncapped = y_lower[i_ncapped].tolist()
-                                    y_upper_nonsig = y_upper[i_nonsig].tolist()
-                                    y_lower_nonsig = y_lower[i_nonsig].tolist()
-                                    dict_erry_sig = dict(
-                                        type='data',
-                                        symmetric=False,
-                                        array=y_upper_ncapped,
-                                        arrayminus=y_lower_ncapped,
-                                        thickness=thk_err,
-                                        width=wid_err,
-                                        color=col_err_sig
-                                    )
-                                    dict_erry_nonsig = dict(
-                                        type='data',
-                                        symmetric=False,
-                                        array=y_upper_nonsig,
-                                        arrayminus=y_lower_nonsig,
-                                        thickness=thk_err,
-                                        width=wid_err,
-                                        color=col_err_nonsig
-                                    )
-                                    labels_capped = get_labels_w_err(x_capped, y_capped, y_lower[i_capped].tolist(),
-                                                                     y_upper[i_capped].tolist(), labels_capped)
-                                    labels_ncapped = get_labels_w_err(x_ncapped, y_ncapped, y_lower_ncapped,
-                                                                     y_upper_ncapped, labels[i_ncapped].tolist())
-                                    labels_nonsig = get_labels_w_err(x_nonsig, y_nonsig, y_lower_nonsig, y_upper_nonsig,
-                                                                   labels[i_nonsig].tolist())
-                                    ylim_upper = min(np.max(y_upper + y), ymax) * (1 + hor_buffer)
-                                else:
-                                    dict_erry_sig, dict_erry_nonsig = None, None
-                                    labels_capped = get_labels(x_capped, y_capped, labels_capped)
-                                    labels_ncapped = get_labels(x_ncapped, y_ncapped, labels[i_ncapped].tolist())
-                                    labels_nonsig = get_labels(x_nonsig, y_nonsig, labels[i_nonsig].tolist())
-                                    ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
-
-                                qq_fig = plot_qq(x_nonsig, y_nonsig, dict_erry_nonsig, labels_nonsig, col_nonsig, opac_nonsig,
-                                                 marker_i, 'Non-significant', qq_fig)
-                                qq_fig = plot_qq(x_ncapped, y_ncapped, dict_erry_sig, labels_ncapped, col_sig, opac_sig,
-                                                 marker_i, 'Significant', qq_fig)
-                                qq_fig = plot_qq(x_capped, [ymax] * sum(i_capped), None, labels_capped, col_sig,
-                                                 opac_sig, marker_i, 'Significant', qq_fig)
-
-                            # Dummy points for legend
-                            for test_i in markers.keys():
-                                qq_fig.add_trace(
-                                    go.Scatter(
-                                        y=[None],
-                                        mode='markers',
-                                        marker=dict(
-                                            color='white',
-                                            symbol=markers[test_i][1],
-                                            size=msize * 1.25,
-                                            line=dict(color='black', width=2)
-                                        ),
-                                        name=markers[test_i][0]
-                                    )
-                                )
-
-                            if display_labels_val:
-                                x_capped = x[ind_capped].tolist()
-                                x_ncapped = x[ind_ncapped].tolist()
-                                y_capped = [ymax] * sum(ind_capped)
-                                y_ncapped = y[ind_ncapped].tolist()
-                                labels_capped = labels[ind_capped].tolist()
-                                labels_ncapped = labels[ind_ncapped].tolist()
-                                for (xi, yi, label) in zip(x_capped + x_ncapped, y_capped + y_ncapped,
-                                                           labels_capped + labels_ncapped):
-                                    qq_fig.add_annotation(
-                                        x=xi,
-                                        y=yi - ylim_upper * y_gap_annot,
-                                        text=label.split('<br>')[-1],
-                                        showarrow=False,
-                                        font=dict(color=col_sig),
-                                        textangle=-90,
-                                        xanchor="center",
-                                        yanchor="top"
-                                    )
-
-                            # Line plots
-                            qq_fig.add_trace(
-                                go.Scatter(
-                                    x=[0, np.max(x)],
-                                    y=[0, np.max(x)],
-                                    mode='lines',
-                                    line=dict(dash=typ_thick, color=col_thick, width=thk_thick),
-                                    showlegend=False,
-                                    hoverinfo='skip'
-                                )
-                            )
-                            if ymax < ylim_upper:
-                                qq_fig.add_trace(
-                                    go.Scatter(
-                                        x=[0, np.max(x) * (1 + hor_buffer)],
-                                        y=[ymax] * 2,
-                                        mode='lines',
-                                        line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
-                                        showlegend=False,
-                                        hoverinfo='skip'
-                                    )
-                                )
-
-                            # Area of confidence intervals for the identity line
-                            xi = np.arange(1, len(pvals) + 1)
-                            clower = -np.log10(sp.stats.beta.ppf((1 - ci) / 2, xi, xi[::-1]))
-                            cupper = -np.log10(sp.stats.beta.ppf((1 + ci) / 2, xi, xi[::-1]))
-                            qq_fig.add_trace(go.Scatter(
-                                x=np.concatenate([x, x[::-1]]).tolist(),  # Combine x values for fill
-                                y=np.concatenate([clower, cupper[::-1]]).tolist(),  # Combine y values for fill
-                                fill='toself',
-                                fillcolor=col_beta,
-                                line=dict(color='rgba(255,255,255,0)'),  # No line for the filled area
-                                showlegend=False,
-                                hoverinfo='skip'
-                            ))
-
-                            # Formatting the figure
-                            qq_fig.update_layout(
-                                title='QQ-Plot of P-values:',
-                                xaxis_title='Expected -Log10(P-value)',
-                                yaxis_title='Observed -Log10(P-value)',
-                                xaxis=dict(range=[0, np.max(x) * (1 + hor_buffer)]),
-                                yaxis=dict(range=[0, ylim_upper]),
-                                template='plotly_white',
-                                legend=dict(
-                                    title=dict(
-                                        text="Dominant Region:",
-                                    ),
-                                    indentation=10
-                                )
-                            )
-
-                            # Save figures as separate data
-                            plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-                                'qq': qq_fig.to_dict(),
-                                'table': table_fig.to_dict(),
-                                'text': bur_key + ' Mutation Burden of ' + mut_key,
-                                'textcolor': 'black-text'
-                            }
-                        else:
-                            plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-                                'qq': None,
-                                'table': None,
-                                'text': text_special,
-                                'textcolor': 'red-text'
-                            }
+    #             for scatterpoint_key, scatterpoint_val in scatterpoint_type.items():
+    #                 for display_labels_key, display_labels_val in display_labels_type.items():
     
-    return qq_fig, table_fig
+    mut_val = mut_type[mut_key]
+    bur_val = burden_type[bur_key]
+    display_bounds_val = display_bounds_type[display_bounds_key]
+    scatterpoint_val = scatterpoint_type[scatterpoint_key]
+    display_labels_val = display_labels_type[display_labels_key]
+    text_special = ""
+
+    if not (mut_key in ['Indels', 'Indels + SNVs'] and bur_key == 'sample_wise'):
+        _, pvals, pval_bounds, labels, test_dom, ind_sig, table_fig = generate_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
+
+        # Q-Q Plot
+        # Scatter plots
+        x = -np.log10(np.arange(1, len(pvals) + 1) / (len(pvals) + 1))
+        y = -np.log10(pvals)
+        ind_capped = y > ymax
+        ind_ncapped = np.logical_and(ind_sig, ~ind_capped)
+        ind_nonsig = ~ind_sig
+        ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
+
+        qq_fig = go.Figure()
+
+        for i in range(len(result_types)):
+
+            ind = test_dom == result_types[i]
+            marker_i = markers[result_types[i]][1]
+            i_nonsig = np.logical_and(ind, ind_nonsig)
+            i_ncapped = np.logical_and(ind, ind_ncapped)
+            i_capped = np.logical_and(ind, ind_capped)
+
+            labels_capped = labels[i_capped].tolist()
+            x_capped = x[i_capped].tolist()
+            y_capped = y[i_capped].tolist()
+            x_ncapped = x[i_ncapped].tolist()
+            y_ncapped = y[i_ncapped].tolist()
+            x_nonsig = x[i_nonsig].tolist()
+            y_nonsig = y[i_nonsig].tolist()
+            if display_bounds_val:
+                y_upper = -np.log10(pval_bounds[:, 0]) - y
+                y_lower = y + np.log10(pval_bounds[:, 1])
+                y_upper_ncapped = y_upper[i_ncapped].tolist()
+                y_lower_ncapped = y_lower[i_ncapped].tolist()
+                y_upper_nonsig = y_upper[i_nonsig].tolist()
+                y_lower_nonsig = y_lower[i_nonsig].tolist()
+                dict_erry_sig = dict(
+                    type='data',
+                    symmetric=False,
+                    array=y_upper_ncapped,
+                    arrayminus=y_lower_ncapped,
+                    thickness=thk_err,
+                    width=wid_err,
+                    color=col_err_sig
+                )
+                dict_erry_nonsig = dict(
+                    type='data',
+                    symmetric=False,
+                    array=y_upper_nonsig,
+                    arrayminus=y_lower_nonsig,
+                    thickness=thk_err,
+                    width=wid_err,
+                    color=col_err_nonsig
+                )
+                labels_capped = get_labels_w_err(x_capped, y_capped, y_lower[i_capped].tolist(),
+                                                    y_upper[i_capped].tolist(), labels_capped)
+                labels_ncapped = get_labels_w_err(x_ncapped, y_ncapped, y_lower_ncapped,
+                                                    y_upper_ncapped, labels[i_ncapped].tolist())
+                labels_nonsig = get_labels_w_err(x_nonsig, y_nonsig, y_lower_nonsig, y_upper_nonsig,
+                                                labels[i_nonsig].tolist())
+                ylim_upper = min(np.max(y_upper + y), ymax) * (1 + hor_buffer)
+            else:
+                dict_erry_sig, dict_erry_nonsig = None, None
+                labels_capped = get_labels(x_capped, y_capped, labels_capped)
+                labels_ncapped = get_labels(x_ncapped, y_ncapped, labels[i_ncapped].tolist())
+                labels_nonsig = get_labels(x_nonsig, y_nonsig, labels[i_nonsig].tolist())
+                ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
+
+            qq_fig = plot_qq(x_nonsig, y_nonsig, dict_erry_nonsig, labels_nonsig, col_nonsig, opac_nonsig,
+                                marker_i, 'Non-significant', qq_fig)
+            qq_fig = plot_qq(x_ncapped, y_ncapped, dict_erry_sig, labels_ncapped, col_sig, opac_sig,
+                                marker_i, 'Significant', qq_fig)
+            qq_fig = plot_qq(x_capped, [ymax] * sum(i_capped), None, labels_capped, col_sig,
+                                opac_sig, marker_i, 'Significant', qq_fig)
+
+        # CHECK WITH DAVID IF HE WANTS THE MARKERS ON THE FINAL VERSION OF THE QQ PLOT
+        # Dummy points for legend
+        for test_i in markers.keys():
+            qq_fig.add_trace(
+                go.Scatter(
+                    y=[None],
+                    mode='markers',
+                    marker=dict(
+                        color='white',
+                        symbol=markers[test_i][1],
+                        size=msize * 1.25,
+                        line=dict(color='black', width=2)
+                    ),
+                    name=markers[test_i][0]
+                )
+            )
+
+        if display_labels_val:
+            x_capped = x[ind_capped].tolist()
+            x_ncapped = x[ind_ncapped].tolist()
+            y_capped = [ymax] * sum(ind_capped)
+            y_ncapped = y[ind_ncapped].tolist()
+            labels_capped = labels[ind_capped].tolist()
+            labels_ncapped = labels[ind_ncapped].tolist()
+            for (xi, yi, label) in zip(x_capped + x_ncapped, y_capped + y_ncapped,
+                                        labels_capped + labels_ncapped):
+                qq_fig.add_annotation(
+                    x=xi,
+                    y=yi - ylim_upper * y_gap_annot,
+                    text=label.split('<br>')[-1],
+                    showarrow=False,
+                    font=dict(color=col_sig),
+                    textangle=-90,
+                    xanchor="center",
+                    yanchor="top"
+                )
+
+        # Line plots
+        qq_fig.add_trace(
+            go.Scatter(
+                x=[0, np.max(x)],
+                y=[0, np.max(x)],
+                mode='lines',
+                line=dict(dash=typ_thick, color=col_thick, width=thk_thick),
+                showlegend=False,
+                hoverinfo='skip'
+            )
+        )
+        if ymax < ylim_upper:
+            qq_fig.add_trace(
+                go.Scatter(
+                    x=[0, np.max(x) * (1 + hor_buffer)],
+                    y=[ymax] * 2,
+                    mode='lines',
+                    line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
+                    showlegend=False,
+                    hoverinfo='skip'
+                )
+            )
+
+        # Area of confidence intervals for the identity line
+        xi = np.arange(1, len(pvals) + 1)
+        clower = -np.log10(sp.stats.beta.ppf((1 - ci) / 2, xi, xi[::-1]))
+        cupper = -np.log10(sp.stats.beta.ppf((1 + ci) / 2, xi, xi[::-1]))
+        qq_fig.add_trace(go.Scatter(
+            x=np.concatenate([x, x[::-1]]).tolist(),  # Combine x values for fill
+            y=np.concatenate([clower, cupper[::-1]]).tolist(),  # Combine y values for fill
+            fill='toself',
+            fillcolor=col_beta,
+            line=dict(color='rgba(255,255,255,0)'),  # No line for the filled area
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+
+        # Formatting the figure
+        qq_fig.update_layout(
+            title='QQ-Plot of P-values:',
+            xaxis_title='Expected -Log10(P-value)',
+            yaxis_title='Observed -Log10(P-value)',
+            xaxis=dict(range=[0, np.max(x) * (1 + hor_buffer)]),
+            yaxis=dict(range=[0, ylim_upper]),
+            template='plotly_white',
+            legend=dict(
+                title=dict(
+                    text="Dominant Region:",
+                ),
+                indentation=10
+            )
+        )
+
+        # Save figures as separate data
+        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
+            'qq': qq_fig.to_dict(),
+            'table': table_fig.to_dict(),
+            'text': bur_key + ' Mutation Burden of ' + mut_key,
+            'textcolor': 'black-text'
+        }
+    else:
+        qq_fig = go.Figure()
+        table_fig = go.Figure()
+        text_special = SPECIAL_TEXT
+
+        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
+            'qq': None,
+            'table': None,
+            'text': SPECIAL_TEXT,
+            'textcolor': 'red-text'
+        }
+    
+    return qq_fig, table_fig, text_special
 
 
 # def parse_args():
