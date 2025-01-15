@@ -26,9 +26,9 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.utils import generate_dig_report_plots, generate_plot_data
+from SNVReviewers.AppComponents.utils import generate_dig_report_plots, generate_plot_data, mut_type, scatterpoint_type
 
-DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding_SNV", "PVAL_promoter_SNV", "PVAL_5utr_SNV", 
+DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            # NEED TO ADD ON recalc, unif if the dropdown menu value is uniform or p-mid
                            # PVAL_coding_SNV -> PVAL_coding_SNV_recalc
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
@@ -70,7 +70,7 @@ def gen_dig_app_component_data_internal_callback(
     dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX] # gets the dig report data for a specific cohort
     dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX]
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
-    debugging_component = "" + str(type(data.df["snv_data"]))
+    debugging_component = "" #+ str(type(data.df["snv_data"]))
     dig_output_type = "Combined"
     display_bounds = True # whether to display the bounds
     
@@ -84,14 +84,26 @@ def gen_dig_app_component_data_internal_callback(
 
     # ADD IN A SELECTION TOOL FOR DISPLAYING BOUNDS, KEYS FOR SEEING BOUNDS IS 'Yes' and 'No'
     qq_fig, table_fig, text_special = generate_dig_report_plots(dig_df, mutation_type, burden_type, display_bounds, display_labels_key, p_val_type)
+    dig_data_columns = []
+    
+
+    for clm_nm in DIG_REPORT_COLUMN_NAMES:
+        dig_data_clm_dict = {}
+        dig_data_clm_dict["name"] = clm_nm
+        dig_data_clm_dict["id"] = clm_nm
+
+        if clm_nm == 'FDR' or "PVAL" in clm_nm:
+            # gets the column name corresponding to the mutation type and the scatterpoint type
+            dig_data_clm_dict["id"] = clm_nm + "_"+ mut_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+
+        debugging_component += "name: " + dig_data_clm_dict["name"] + " id: " + dig_data_clm_dict["id"] + "; "
+        
+        dig_data_columns.append(dig_data_clm_dict)
+    
 
     # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
     dig_df = dig_df[:500]
-
-    # rename the columns of the dig_df from FDR_SNV_unif -> FDR, to this for all the columns DIG_REPORT_COLUMN_NAMES
-        # the actual dig_df has different column names
-
 
     # wrap up the precalled purity 
 
@@ -99,6 +111,7 @@ def gen_dig_app_component_data_internal_callback(
             dig_df.to_dict('records'),
             dig_type_selection,
             qq_fig,
+            dig_data_columns,
             mutation_type,
             burden_type,
             p_val_type,
@@ -265,6 +278,7 @@ def gen_dig_report_app_component():
             Output('dig-report-coding-table', 'data'),
             Output('dig-report-type-label', 'children'),
             Output('dig-qq-graph', 'figure'),
+            Output('dig-report-coding-table', 'columns'),
             Output('dig-mutation-dropdown', 'value'),
             Output('dig-burden-dropdown', 'value'),
             Output('dig-p-value-dropdown', 'value'),
