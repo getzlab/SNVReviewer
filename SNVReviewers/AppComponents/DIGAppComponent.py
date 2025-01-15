@@ -28,19 +28,11 @@ import numpy as np
 
 from SNVReviewers.AppComponents.utils import generate_dig_report_plots, generate_plot_data
 
-DIG_REPORT_COLUMN_NAMES = ["GENE", "CHROM", "GENE_LENGTH", "PVAL", "FDR", "OBS", "EXP", "MU", "SIGMA", ""]
-                        # [
-                        #     "GENE", "CHROM", "GENE_LENGTH", "R_SIZE", "R_OBS", "R_INDEL", 
-                        #    "MU", "SIGMA", "ALPHA", "THETA", "MU_INDEL", "SIGMA_INDEL", "ALPHA_INDEL",
-                        #    "THETA_INDEL", "FLAG", "Pi_SYN", "Pi_MIS", "Pi_NONS", "Pi_SPL", "Pi_TRUNC",
-                        #    "Pi_NONSYN", "Pi_INDEL", "OBS_SYN", "OBS_MIS", "OBS_NONS", "OBS_SPL", "OBS_INDEL",
-                        #    "OBS_TRUNC", "OBS_NONSYN", "N_SAMP_SYN",	"N_SAMP_MIS", "N_SAMP_NONS", "N_SAMP_SPL",
-                        #    "N_SAMP_TRUNC", "N_SAMP_NONSYN",	"N_SAMP_INDEL",	"EXP_SYN", "EXP_MIS", "EXP_NONS",	
-                        #    "EXP_SPL", "EXP_TRUNC", "EXP_NONSYN", "PVAL_SYN_BURDEN",	"PVAL_MIS_BURDEN",	"PVAL_NONS_BURDEN",	
-                        #    "PVAL_SPL_BURDEN", "PVAL_TRUNC_BURDEN",	"PVAL_NONSYN_BURDEN", "PVAL_SYN_BURDEN_SAMPLE",
-                        #    "PVAL_MIS_BURDEN_SAMPLE", "PVAL_NONS_BURDEN_SAMPLE",	"PVAL_SPL_BURDEN_SAMPLE", "PVAL_TRUNC_BURDEN_SAMPLE",	
-                        #    "PVAL_NONSYN_BURDEN_SAMPLE",	"EXP_INDEL", "PVAL_INDEL_BURDEN", "PVAL_MUT_BURDEN"
-                        # ]
+DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding_SNV", "PVAL_promoter_SNV", "PVAL_5utr_SNV", 
+                           # NEED TO ADD ON recalc, unif if the dropdown menu value is uniform or p-mid
+                           # PVAL_coding_SNV -> PVAL_coding_SNV_recalc
+                           "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
+                    
 DIG_REPORT_VALUES = ["Combined", "Coding regions", "Promoter regions", "5-prime UTRs", "3-prime UTRs"]
 DIG_DATAFRAME_IDX = 0
 DND_DATAFRAME_IDX = 1
@@ -206,7 +198,7 @@ def gen_dig_app_component_layout():
                 value=''),
 
                 dbc.Label(id="special-text-output", children=""),
-                
+
                 # creates the dig QQ plot
                 dcc.Graph(id='dig-qq-graph', figure={}),
             ]),
