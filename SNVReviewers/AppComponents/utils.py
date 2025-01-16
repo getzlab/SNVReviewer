@@ -477,7 +477,7 @@ def generate_dig_report_plots(df, mut_key, bur_key, display_bounds_key, display_
     display_labels_val = display_labels_type[display_labels_key]
     text_special = ""
 
-    if not (mut_key in ['Indels', 'Indels + SNVs'] and bur_key == 'sample_wise'):
+    if not (mut_key in ['indels', 'indels_snvs'] and bur_key == 'sample_wise'):
         _, pvals, pval_bounds, labels, test_dom, ind_sig, table_fig = generate_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
 
         # Q-Q Plot

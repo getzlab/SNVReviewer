@@ -2,6 +2,7 @@ from dash import dcc, html
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
+import dash_daq as daq
 
 from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
@@ -50,7 +51,8 @@ def gen_dig_app_component_data_internal_callback(
     dig_type_selection,
     mutation_type,
     burden_type,
-    p_val_type
+    p_val_type,
+    display_toggle_value
 ):
     """
     
@@ -111,8 +113,6 @@ def gen_dig_app_component_data_internal_callback(
         if 'FDR' in column or 'PVAL' in column:
             dig_df[column] = np.round(dig_df[column], decimals=3)
         
-    # REDUCE THE PRECISION SHOWN IN THE TABLE TO 3, i.e. FDR should only show 3 decimal places
-    # look into overflow styling for the table so it doesn't exceed the page
     # get the coding region working plots working!!
     # get the display bounds selection tool working 
 
@@ -141,7 +141,8 @@ def gen_dig_app_component_data_external_callback(
     dig_type_selection,
     mutation_type,
     burden_type,
-    p_val_type
+    p_val_type,
+    display_toggle_value
 ):
     """
     """
@@ -152,7 +153,8 @@ def gen_dig_app_component_data_external_callback(
                 dig_type_selection, 
                 mutation_type,
                 burden_type,
-                p_val_type
+                p_val_type,
+                display_toggle_value
             )
     
     return output
@@ -236,6 +238,20 @@ def gen_dig_app_component_layout():
                     ])
                 ]),
                 html.Div([
+                    dbc.Row([
+                        dbc.Col([
+                            html.Label(children="Display Bounds"), 
+                        ]),
+                        dbc.Col([
+                            # makes a toggle component
+                            daq.ToggleSwitch(
+                            id='display-bounds-toggle-switch',
+                            value=False),
+                        ])
+                    ])
+                ]),
+
+                html.Div([
                     dbc.Label(id="special-text-output", children=""),
                 ]),
             
@@ -283,7 +299,7 @@ def gen_dig_app_component_layout():
                             'maxWidth': '100%',  # Ensure it doesn’t go beyond the screen width
                             'overflowX': 'auto',  # Allow horizontal scroll if necessary
                         },
-                        # fill_width=False
+                       
                         ),
                     ]
                 )
@@ -307,6 +323,7 @@ def gen_dig_report_app_component():
             Input('dig-mutation-dropdown', 'value'),
             Input('dig-burden-dropdown', 'value'),
             Input('dig-p-value-dropdown', 'value'),
+            Input('display-bounds-toggle-switch', 'value')
         ],
 
         callback_output=[
