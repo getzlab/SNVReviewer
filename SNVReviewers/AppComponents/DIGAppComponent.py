@@ -61,18 +61,13 @@ def gen_dig_app_component_data_internal_callback(
         burden_type = 'total'
         p_val_type = 'uniform_p_mid'
 
-    # add a radio item that allows the user to be able to select which type of dig table they want to view
-        # coding
-        # 3-utr
-        # 5-utr
-        # non coding
-        # combined
-    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX] # gets the dig report data for a specific cohort
-    dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX]
-    mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
+    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX].copy()
+    mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX].copy()
+
     debugging_component = "" #+ str(type(data.df["snv_data"]))
     dig_output_type = "Combined"
-    display_bounds = True # whether to display the bounds
+    display_bounds = False # whether to display the bounds
     
     dir_output = "./example_notebooks/data/dig_data"
     dig_figure = go.Figure()
@@ -86,7 +81,6 @@ def gen_dig_app_component_data_internal_callback(
     qq_fig, table_fig, text_special = generate_dig_report_plots(dig_df, mutation_type, burden_type, display_bounds, display_labels_key, p_val_type)
     dig_data_columns = []
     
-
     for clm_nm in DIG_REPORT_COLUMN_NAMES:
         dig_data_clm_dict = {}
         dig_data_clm_dict["name"] = clm_nm
@@ -96,10 +90,31 @@ def gen_dig_app_component_data_internal_callback(
             # gets the column name corresponding to the mutation type and the scatterpoint type
             dig_data_clm_dict["id"] = clm_nm + "_"+ mut_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
 
-        debugging_component += "name: " + dig_data_clm_dict["name"] + " id: " + dig_data_clm_dict["id"] + "; "
-        
+        # if display_bounds:
+        #     dig_data_clm_dict["id"] += "_lower"
+        #     dig_data_columns.append(di g_data_clm_dict) # appends the lower bound column info
+        #     dig_data_clm_dict = {}
+
+        # debugging_component += "name: " + dig_data_clm_dict["name"] + " id: " + dig_data_clm_dict["id"] + "; "
         dig_data_columns.append(dig_data_clm_dict)
     
+    for column_dict in dig_data_columns:
+        # gets the dig data column name
+        column = column_dict["id"]
+        # debugging_component += "column name: " + column +"; "
+
+        # skip the rank column
+        if column == 'RANK':
+            continue
+
+        # rounds all the values in the FDR and PVAL columns to 3 decimal places
+        if 'FDR' in column or 'PVAL' in column:
+            dig_df[column] = np.round(dig_df[column], decimals=3)
+        
+    # REDUCE THE PRECISION SHOWN IN THE TABLE TO 3, i.e. FDR should only show 3 decimal places
+    # look into overflow styling for the table so it doesn't exceed the page
+    # get the coding region working plots working!!
+    # get the display bounds selection tool working 
 
     # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
@@ -130,13 +145,6 @@ def gen_dig_app_component_data_external_callback(
 ):
     """
     """
-    # add a radio item that allows the user to be able to select which type of dig table they want to view
-        # coding
-        # 3-utr
-        # 5-utr
-        # non coding
-        # combined
-    # print(type)
     output = gen_dig_app_component_data_internal_callback(
                 data,
                 idx,
@@ -147,8 +155,6 @@ def gen_dig_app_component_data_external_callback(
                 p_val_type
             )
     
-    # output[DIG_LABEL_IDX] = dig_label
-
     return output
 
 def gen_dig_app_component_layout():
@@ -164,6 +170,21 @@ def gen_dig_app_component_layout():
             # Plotly Figure for the DIG Report
             html.Div([
 
+                # dbc.Row([
+                #     dbc.Col([
+                #         dbc.RadioItems(
+                #         options=[
+                #             {
+                #                 "label": val, 
+                #                 "value": val
+                #             }
+                #         ],
+                #         value="Combined",
+                #         id=f"dig-report-type-radioitems-{DIG_REPORT_VALUES[idx]}",
+                #         ),
+                #     ]) for idx, val in enumerate(DIG_REPORT_VALUES)
+                # ]),
+                
                 # radio button for selecting which type of report to display
                 dbc.RadioItems(
                     options=[
@@ -176,42 +197,48 @@ def gen_dig_app_component_layout():
                     id="dig-report-type-radioitems",
                 ),
 
-                # dropdown for selecting a mutation type
-                dbc.Label("Select Mutation Type"),
-                dcc.Dropdown(
-                id='dig-mutation-dropdown',
-                options=[
-                    {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
-                    {'label': 'Indels', 'value': 'indels'},
-                    {'label': 'SNVs', 'value': 'snvs'}
-                ],
-                value=''
-                ),
-
-
-                # dropdown for selecting burden type
-                dbc.Label("Select Burden Type"),
-                dcc.Dropdown(
-                id='dig-burden-dropdown',
-                options=[
-                    {'label': 'Total', 'value': 'total'},
-                    {'label': 'Sample-wise', 'value': 'sample_wise'}
-                ],
-                value=''
-                ),
-
-                # dropdown for selecting burden type
-                dbc.Label("P-value Type"),
-                dcc.Dropdown(
-                id='dig-p-value-dropdown',
-                options=[
-                    {'label': 'Uniform P-mid', 'value': 'uniform_p_mid'},
-                    {'label': 'P-mid', 'value': 'p_mid'},
-                ],
-                value=''),
-
-                dbc.Label(id="special-text-output", children=""),
-
+                dbc.Row([# insert the dropdown menus as columns inside this list for dbc.Row
+                    dbc.Col([
+                        # dropdown for selecting a mutation type
+                        dbc.Label("Select Mutation Type"),
+                        dcc.Dropdown(
+                        id='dig-mutation-dropdown',
+                        options=[
+                            {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
+                            {'label': 'Indels', 'value': 'indels'},
+                            {'label': 'SNVs', 'value': 'snvs'}
+                        ],
+                        value='',
+                        ),
+                    ]),
+                    dbc.Col([
+                        # dropdown for selecting burden type
+                        dbc.Label("Select Burden Type"),
+                        dcc.Dropdown(
+                        id='dig-burden-dropdown',
+                        options=[
+                            {'label': 'Total', 'value': 'total'},
+                            {'label': 'Sample-wise', 'value': 'sample_wise'}
+                        ],
+                        value=''
+                        ),
+                    ]),
+                    dbc.Col([
+                        # dropdown for selecting burden type
+                        dbc.Label("P-value Type"),
+                        dcc.Dropdown(
+                        id='dig-p-value-dropdown',
+                        options=[
+                            {'label': 'Uniform P-mid', 'value': 'uniform_p_mid'},
+                            {'label': 'P-mid', 'value': 'p_mid'},
+                        ],
+                        value=''),
+                    ])
+                ]),
+                html.Div([
+                    dbc.Label(id="special-text-output", children=""),
+                ]),
+            
                 # creates the dig QQ plot
                 dcc.Graph(id='dig-qq-graph', figure={}),
             ]),
@@ -249,7 +276,15 @@ def gen_dig_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5),
+                        page_size=5,
+                        # changing the width of the data table to 
+                        style_table={
+                            'width': '100%',  # Make the table width responsive
+                            'maxWidth': '100%',  # Ensure it doesn’t go beyond the screen width
+                            'overflowX': 'auto',  # Allow horizontal scroll if necessary
+                        },
+                        # fill_width=False
+                        ),
                     ]
                 )
             ], 
@@ -286,52 +321,3 @@ def gen_dig_report_app_component():
             Output('debugging', 'children'),
         ],
     )
-
-
-# PVAL_coding_SNV_recalc	
-    # PVAL_coding_SNV_unif	
-    # PVAL_coding_SNV_lower	
-    # PVAL_coding_SNV_upper	
-    # PVAL_coding_SNV_SAMPLE_recalc	
-    # PVAL_coding_SNV_SAMPLE_unif	
-    # PVAL_coding_SNV_SAMPLE_lower	
-    # PVAL_coding_SNV_SAMPLE_upper	
-    # PVAL_coding_INDEL_recalc	
-    # PVAL_coding_INDEL_unif	
-    # PVAL_coding_INDEL_lower	
-    # PVAL_coding_INDEL_upper	
-    # PVAL_coding_MUT_recalc	
-    # PVAL_coding_MUT_unif	
-    # PVAL_coding_MUT_lower	
-    # PVAL_coding_MUT_upper	
-    # SIZE_promoter	
-    # PVAL_promoter_SNV_recalc	
-    # PVAL_promoter_SNV_unif	
-    # PVAL_promoter_SNV_lower	
-    # PVAL_promoter_SNV_upper	
-    # PVAL_promoter_SNV_SAMPLE_recalc	
-    # PVAL_promoter_SNV_SAMPLE_unif	
-    # PVAL_promoter_SNV_SAMPLE_lower	
-    # PVAL_promoter_SNV_SAMPLE_upper	
-    # PVAL_promoter_INDEL_recalc	
-    # PVAL_promoter_INDEL_unif	
-    # PVAL_promoter_INDEL_lower	
-    # PVAL_promoter_INDEL_upper	
-    # PVAL_promoter_MUT_recalc	
-    # PVAL_promoter_MUT_unif	
-    # PVAL_promoter_MUT_lower	
-    # PVAL_promoter_MUT_upper	
-    # SIZE_5utr	
-    # PVAL_5utr_SNV_recalc	
-    # PVAL_5utr_SNV_unif	PVAL_5utr_SNV_lower	PVAL_5utr_SNV_upper	PVAL_5utr_SNV_SAMPLE_recalc	PVAL_5utr_SNV_SAMPLE_unif	
-    # PVAL_5utr_SNV_SAMPLE_lower	PVAL_5utr_SNV_SAMPLE_upper	PVAL_5utr_INDEL_recalc	PVAL_5utr_INDEL_unif	
-    # PVAL_5utr_INDEL_lower	PVAL_5utr_INDEL_upper	PVAL_5utr_MUT_recalc	PVAL_5utr_MUT_unif	PVAL_5utr_MUT_lower	
-    # PVAL_5utr_MUT_upper	SIZE_3utr	PVAL_3utr_SNV_recalc	PVAL_3utr_SNV_unif	PVAL_3utr_SNV_lower	PVAL_3utr_SNV_upper	
-    # PVAL_3utr_SNV_SAMPLE_recalc	PVAL_3utr_SNV_SAMPLE_unif	PVAL_3utr_SNV_SAMPLE_lower	PVAL_3utr_SNV_SAMPLE_upper	
-    # PVAL_3utr_INDEL_recalc	PVAL_3utr_INDEL_unif	PVAL_3utr_INDEL_lower	PVAL_3utr_INDEL_upper	PVAL_3utr_MUT_recalc	
-    # PVAL_3utr_MUT_unif	PVAL_3utr_MUT_lower	PVAL_3utr_MUT_upper	PVAL_SNV_recalc	FDR_SNV_recalc	PVAL_SNV_unif	FDR_SNV_unif	
-    # PVAL_SNV_lower	FDR_SNV_lower	PVAL_SNV_upper	FDR_SNV_upper	PVAL_INDEL_recalc	FDR_INDEL_recalc	PVAL_INDEL_unif	
-    # FDR_INDEL_unif	PVAL_INDEL_lower	FDR_INDEL_lower	PVAL_INDEL_upper	FDR_INDEL_upper	PVAL_MUT_recalc	FDR_MUT_recalc	
-    # PVAL_MUT_unif	FDR_MUT_unif	PVAL_MUT_lower	FDR_MUT_lower	PVAL_MUT_upper	FDR_MUT_upper	PVAL_SNV_SAMPLE_recalc	
-    # FDR_SNV_SAMPLE_recalc	PVAL_SNV_SAMPLE_unif	FDR_SNV_SAMPLE_unif	PVAL_SNV_SAMPLE_lower	FDR_SNV_SAMPLE_lower	
-    # PVAL_SNV_SAMPLE_upper	FDR_SNV_SAMPLE_upper	CGC	PANCAN
