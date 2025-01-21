@@ -123,9 +123,12 @@ def gen_dig_app_component_data_internal_callback(
         if column == 'RANK':
             continue
 
+        format='{:.3E}'
+        # round based on significant digits
         # rounds all the values in the FDR and PVAL columns to 3 decimal places
         if 'FDR' in column or 'PVAL' in column:
-            dig_df[column] = np.round(dig_df[column], decimals=3)
+            dig_df[column] = [format.format(value) for value in dig_df[column]]
+            # dig_df[column] = np.round(dig_df[column], decimals=3)
         
     # get the coding region working plots working!!
     # get the display bounds selection tool working 
