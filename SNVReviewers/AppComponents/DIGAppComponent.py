@@ -52,7 +52,8 @@ def gen_dig_app_component_data_internal_callback(
     mutation_type,
     burden_type,
     p_val_type,
-    display_toggle_value
+    display_toggle_value,
+    display_label_value
 ):
     """
     
@@ -67,17 +68,30 @@ def gen_dig_app_component_data_internal_callback(
     dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX].copy()
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX].copy()
 
+    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ mut_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
+    dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
+
     debugging_component = "" #+ str(type(data.df["snv_data"]))
     dig_output_type = "Combined"
-    display_bounds = False # whether to display the bounds
+    display_bounds = display_toggle_value # whether to display the bounds
     
     dir_output = "./example_notebooks/data/dig_data"
     dig_figure = go.Figure()
     qq_fig = go.Figure()
 
-    # MAKE SURE TO ADD PLOTLY DASH COMPONENT THAT WILL UPDATE THIS VALUE
-    display_bounds = 'No'
-    display_labels_key = 'No'
+    # checks if the user wants to display the bounds on the dig report plot
+    if display_toggle_value:
+        display_bounds = 'Yes'
+
+    # defaults to not displaying lower/upper bounds on the dig report plot
+    else:
+        display_bounds = 'No'
+    
+    if display_label_value:
+        display_labels_key = 'Yes'
+    
+    else:
+        display_labels_key = 'No'
 
     # ADD IN A SELECTION TOOL FOR DISPLAYING BOUNDS, KEYS FOR SEEING BOUNDS IS 'Yes' and 'No'
     qq_fig, table_fig, text_special = generate_dig_report_plots(dig_df, mutation_type, burden_type, display_bounds, display_labels_key, p_val_type)
@@ -118,6 +132,9 @@ def gen_dig_app_component_data_internal_callback(
 
     # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
+
+
+    # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
     dig_df = dig_df[:500]
 
     # wrap up the precalled purity 
@@ -142,7 +159,8 @@ def gen_dig_app_component_data_external_callback(
     mutation_type,
     burden_type,
     p_val_type,
-    display_toggle_value
+    display_toggle_value, 
+    display_label_value
 ):
     """
     """
@@ -154,7 +172,8 @@ def gen_dig_app_component_data_external_callback(
                 mutation_type,
                 burden_type,
                 p_val_type,
-                display_toggle_value
+                display_toggle_value,
+                display_label_value
             )
     
     return output
@@ -239,14 +258,22 @@ def gen_dig_app_component_layout():
                 ]),
                 html.Div([
                     dbc.Row([
+                        # dbc.Col([
+                        #     html.Label(children="Display Bounds"), 
+                        # ]),
                         dbc.Col([
-                            html.Label(children="Display Bounds"), 
+                            # makes a toggle component
+                            daq.BooleanSwitch(
+                            id='display-bounds-toggle-switch',
+                            label='Display Bounds',
+                            on=False),
                         ]),
                         dbc.Col([
                             # makes a toggle component
-                            daq.ToggleSwitch(
-                            id='display-bounds-toggle-switch',
-                            value=False),
+                            daq.BooleanSwitch(
+                            id='display-labels-toggle-switch',
+                            label='Display Labels',
+                            on=False),
                         ])
                     ])
                 ]),
@@ -293,6 +320,7 @@ def gen_dig_app_component_layout():
                         page_action="native",
                         page_current=0,
                         page_size=5,
+                        
                         # changing the width of the data table to 
                         style_table={
                             'width': '100%',  # Make the table width responsive
@@ -323,7 +351,8 @@ def gen_dig_report_app_component():
             Input('dig-mutation-dropdown', 'value'),
             Input('dig-burden-dropdown', 'value'),
             Input('dig-p-value-dropdown', 'value'),
-            Input('display-bounds-toggle-switch', 'value')
+            Input('display-bounds-toggle-switch', 'on'),
+            Input('display-labels-toggle-switch', 'on')
         ],
 
         callback_output=[
