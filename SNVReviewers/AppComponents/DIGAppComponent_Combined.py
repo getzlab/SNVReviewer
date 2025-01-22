@@ -27,7 +27,7 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.utils import generate_dig_report_plots, generate_plot_data, mut_type, scatterpoint_type
+from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, combined_mutation_type, scatterpoint_type
 
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            # NEED TO ADD ON recalc, unif if the dropdown menu value is uniform or p-mid
@@ -68,10 +68,11 @@ def gen_dig_app_component_data_internal_callback(
     dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX].copy()
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX].copy()
 
-    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ mut_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
+    if dig_label == "Combined":
+        dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
-    debugging_component = "" #+ str(type(data.df["snv_data"]))
+    debugging_component = ""
     dig_output_type = "Combined"
     display_bounds = display_toggle_value # whether to display the bounds
     
@@ -93,8 +94,14 @@ def gen_dig_app_component_data_internal_callback(
     else:
         display_labels_key = 'No'
 
-    # ADD IN A SELECTION TOOL FOR DISPLAYING BOUNDS, KEYS FOR SEEING BOUNDS IS 'Yes' and 'No'
-    qq_fig, table_fig, text_special = generate_dig_report_plots(dig_df, mutation_type, burden_type, display_bounds, display_labels_key, p_val_type)
+    qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, 
+                                                                         burden_type, display_bounds, 
+                                                                         display_labels_key, p_val_type)
+    
+
+    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
+    volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+
     dig_data_columns = []
     
     for clm_nm in DIG_REPORT_COLUMN_NAMES:
@@ -104,38 +111,29 @@ def gen_dig_app_component_data_internal_callback(
 
         if clm_nm == 'FDR' or "PVAL" in clm_nm:
             # gets the column name corresponding to the mutation type and the scatterpoint type
-            dig_data_clm_dict["id"] = clm_nm + "_"+ mut_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
 
-        # if display_bounds:
-        #     dig_data_clm_dict["id"] += "_lower"
-        #     dig_data_columns.append(di g_data_clm_dict) # appends the lower bound column info
-        #     dig_data_clm_dict = {}
-
-        # debugging_component += "name: " + dig_data_clm_dict["name"] + " id: " + dig_data_clm_dict["id"] + "; "
         dig_data_columns.append(dig_data_clm_dict)
     
     for column_dict in dig_data_columns:
         # gets the dig data column name
         column = column_dict["id"]
-        # debugging_component += "column name: " + column +"; "
 
         # skip the rank column
         if column == 'RANK':
             continue
 
         format='{:.3E}'
-        # round based on significant digits
-        # rounds all the values in the FDR and PVAL columns to 3 decimal places
+
+        # rounds all the values in the FDR and PVAL columns to 4 significant digits
         if 'FDR' in column or 'PVAL' in column:
             dig_df[column] = [format.format(value) for value in dig_df[column]]
-            # dig_df[column] = np.round(dig_df[column], decimals=3)
         
     # get the coding region working plots working!!
     # get the display bounds selection tool working 
 
     # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
-
 
     # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
     dig_df = dig_df[:500]
@@ -166,6 +164,7 @@ def gen_dig_app_component_data_external_callback(
     display_label_value
 ):
     """
+
     """
     output = gen_dig_app_component_data_internal_callback(
                 data,
@@ -261,9 +260,6 @@ def gen_dig_app_component_layout():
                 ]),
                 html.Div([
                     dbc.Row([
-                        # dbc.Col([
-                        #     html.Label(children="Display Bounds"), 
-                        # ]),
                         dbc.Col([
                             # makes a toggle component
                             daq.BooleanSwitch(
@@ -323,14 +319,13 @@ def gen_dig_app_component_layout():
                         page_action="native",
                         page_current=0,
                         page_size=5,
-                        
+                    
                         # changing the width of the data table to 
                         style_table={
                             'width': '100%',  # Make the table width responsive
                             'maxWidth': '100%',  # Ensure it doesn’t go beyond the screen width
                             'overflowX': 'auto',  # Allow horizontal scroll if necessary
-                        },
-                       
+                            },
                         ),
                     ]
                 )
@@ -338,7 +333,7 @@ def gen_dig_app_component_layout():
         )
     ]
 
-def gen_dig_report_app_component():
+def gen_combined_dig_report_app_component():
     """
     
     """
