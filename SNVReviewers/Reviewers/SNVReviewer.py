@@ -5,6 +5,7 @@ from dash.dependencies import State
 from rpy2.robjects import pandas2ri
 
 from SNVReviewers.AppComponents.DIGAppComponent_Combined import gen_combined_dig_report_app_component
+from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_report_coding_region_app_component
 
 from AnnoMate.Data import DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp
@@ -56,8 +57,14 @@ class SNVReviewer(ReviewerTemplate):
         """
         app = ReviewDataApp()
         
+        # Adds a component for combined result
         app.add_component(
             gen_combined_dig_report_app_component(),
+        )
+
+        # Adds a component for coding region result
+        app.add_component(
+            gen_dig_report_coding_region_app_component(),
         )
 
         return app

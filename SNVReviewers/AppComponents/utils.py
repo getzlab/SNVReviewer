@@ -55,9 +55,9 @@ markers = {
 msize = 7.5
 
 # dropdown options
-combined_burden_plot_type = {
-    'Total': '',
-    'Sample-wise': 'SAMPLE',
+combined_burden_type = {
+    'total': '',
+    'sample_wise': 'SAMPLE',
 }
 combined_result_types = ['coding', 'promoter', '5utr', '3utr']
 
@@ -110,21 +110,21 @@ SPECIAL_TEXT = 'Sample-wise case does not exist for Indels and Indels + Nonsynon
 col_err_sig = ','.join(col_sig.split(',')[:-1]) + ', {})'.format(opac_err)
 col_err_nonsig = ','.join(col_nonsig.split(',')[:-1]) + ', {})'.format(opac_err)
 
-# dictionaries for coding region the two dropdowns
+
 coding_region_burden_type = {
     'total': 'BURDEN',
     'sample_wise': 'BURDEN_SAMPLE',
 }
 
 coding_region_mutation_type = {
-    'Indels + Nonsynonymous SNVs': 'MUT',
-    'Indels': 'INDEL',
-    'Nonsynonymous SNVs': 'NONSYN',
-    'Missense SNVs': 'MIS',
-    'Nonsense SNVs': 'NONS',
-    'Truncating SNVs': 'TRUNC',
-    'Splice site SNVs': 'SPL',
-    'Synonymous SNVs': 'SYN',
+    'indels_nonsynonymous_snvs': 'MUT',
+    'indels': 'INDEL',
+    'nonsynonymous_snvs': 'NONSYN',
+    'missense_snvs': 'MIS',
+    'nonsense_snvs': 'NONS',
+    'truncating_snvs': 'TRUNC',
+    'splice_site_snvs': 'SPL',
+    'synonymous_snvs': 'SYN',
 }
 
 # used for generating the Combined QQ plot
@@ -134,7 +134,7 @@ combined_mutation_type = {
     'snvs': 'SNV'
 }
 
-# same for the combined and coding region
+# dictionaries for both combined coding region the two dropdowns
 scatterpoint_type = {
     "uniform_p_mid": "unif",
     "p_mid": "recalc"
@@ -190,6 +190,7 @@ def generate_dig_report_dataframe_combined(
     print("this is the path to the dig results: ")
     print(path_to_dig_results)
     df = pd.read_csv(path_to_dig_results, sep='\t')
+
     # df = df.iloc[:20]
     # Adding indicator of genes being part of the CGC or PanCan list
     df['CGC'] = df['GENE'].isin(cgc_list)
@@ -348,7 +349,7 @@ def nb_pvalue_uniform_midp(k, alpha, p):
     """
     return np.random.uniform(size=k.shape) * sp.stats.nbinom.pmf(k, alpha, p) + sp.special.betainc(k+1, alpha, 1-p)
 
-def reformat_numbers(df, cols, form='{:.2E}'):
+def combined_reformat_numbers(df, cols, form='{:.2E}'):
     """
     Reformat numbers in an array to a specific format
     """
@@ -399,9 +400,9 @@ def generate_combined_plot_data(df, mut, bur, display_bounds, scatterpoint):
     }, inplace=True)
     df_plot.rename(columns={'PVAL_' + rt + '_' + col_chosen: 'PVAL_' + rt for rt in combined_result_types}, inplace=True)
 
-    df_plot[col_sizes] = reformat_numbers(df_plot, col_sizes, form='{:.0f}')
+    df_plot[col_sizes] = combined_reformat_numbers(df_plot, col_sizes, form='{:.0f}')
     cols_floats = ['PVAL', 'FDR'] + ['PVAL_' + rt for rt in combined_result_types]
-    df_plot[cols_floats] = reformat_numbers(df_plot, cols_floats)
+    df_plot[cols_floats] = combined_reformat_numbers(df_plot, cols_floats)
 
     # Ensure no NaN values in the table
     # df_plot.fillna('NA', inplace=True)
@@ -454,7 +455,7 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
     plot_data = {}
     
     mut_val = combined_mutation_type[mut_key]
-    bur_val = combined_burden_plot_type[bur_key]
+    bur_val = combined_burden_type[bur_key]
     display_bounds_val = display_bounds_type[display_bounds_key]
     scatterpoint_val = scatterpoint_type[scatterpoint_key]
     display_labels_val = display_labels_type[display_labels_key]
@@ -783,6 +784,7 @@ def generate_coding_region_plot_data(
             df_plot.loc[i, :] = '<b>' + df_plot.loc[i, :].astype(str) + '</b>'
     # Adding hyperlinks to a Google search for the gene names
     gene_entries = []
+
     for g in df_plot['GENE']:
         if '<b>' in g:
             g_trimmed = g.split('>')[1].split('<')[0]
@@ -828,33 +830,35 @@ def generate_coding_region_plot_data(
 
 def generate_coding_region_dig_dataframe(
         path_to_dig_results, 
-        dir_output, 
-        cgc_list_path, 
-        pancan_list_path, 
-        prefix_output=None, 
-        alp=0.1
     ):
     """ 
     
     """
     # Driver gene lists
+    cgc_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
+    pancan_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
+
+    # Driver gene lists
     cgc_list = pd.read_csv(cgc_list_path, sep='\t').to_numpy().flatten()
     pancan_list = pd.read_csv(pancan_list_path, sep='\t').to_numpy().flatten()
+
     # Output from DIGDriver
     df = pd.read_csv(path_to_dig_results, sep='\t')
+
     # df = df.iloc[:20]
     # Adding indicator of genes being part of the CGC or PanCan list
     df['CGC'] = df['GENE'].isin(cgc_list)
     df['PANCAN'] = df['GENE'].isin(pancan_list)
-    muts_ts = list(mut_type.values())
+
+    muts_ts = list(coding_region_mutation_type.values())
     if 'EXP_INDEL' in df.columns:
         # Adding new columns for Non-synonymous SNVs + Indels
         df['OBS_MUT'] = df['OBS_NONSYN'] + df['OBS_INDEL']
         df['EXP_MUT'] = df['EXP_NONSYN'] + df['EXP_INDEL']
     else:
-        for key in list(mut_type.keys()):
+        for key in list(coding_region_mutation_type.keys()):
             if 'indel' in key.lower():
-                del mut_type[key]
+                del coding_region_mutation_type[key]
     # Computing lower and upper bounds for the p-values
     muts_ts.remove('INDEL')
     muts_ts.remove('MUT')
@@ -930,6 +934,7 @@ def generate_coding_region_dig_dataframe(
         df[col_mut + '_unif'] = np.nan
         df[col_mut + '_lower'] = np.nan
         df[col_mut + '_upper'] = np.nan
+
         for idx in df.index:
             df.at[idx, col_mut + '_recalc'] = sp.stats.combine_pvalues(
                 [df.at[idx, 'PVAL_NONSYN_BURDEN_recalc'], df.at[idx, 'PVAL_INDEL_BURDEN_recalc']],
@@ -964,7 +969,7 @@ def generate_coding_region_report(
     display_bounds_val = display_bounds_type[display_bounds_key]
     scatterpoint_val = scatterpoint_type[scatterpoint_key]
 
-    if not (mut_key in ['Indels', 'Indels + Nonsynonymous SNVs'] and bur_key == 'Sample-wise'):
+    if not (mut_key in ['indels', 'indels_nonsynonymous_snvs'] and bur_key == 'sample_wise'):
         df_kept, pvals, pval_bounds, logfc, logq, logq_bounds, labels, ind_kept, table_fig = generate_coding_region_plot_data(df, 
                                                                                                                               mut_val, 
                                                                                                                               bur_val, 
@@ -1069,7 +1074,7 @@ def generate_coding_region_report(
                 hoverinfo='skip'
             )
         )
-        
+
         volcano_fig.add_trace(
             go.Scatter(
                 x=[0, np.max(logfc) * (1 + hor_buffer)],
@@ -1247,6 +1252,7 @@ def generate_coding_region_report(
         dnds_labels = df_kept['GENE'][~ind_isna].to_numpy()
         xmax = np.max(dnds_exp) * (1 + hor_buffer)
         ind_psel = dnds_obs > dnds_exp
+
         dnds_fig = go.Figure()
         dnds_fig.add_trace(
             go.Scatter(
@@ -1340,4 +1346,4 @@ def generate_coding_region_report(
         yaxis_type='log'
     )
 
-    return volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special
+    return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special
