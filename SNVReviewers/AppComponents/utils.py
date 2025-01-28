@@ -5,6 +5,7 @@ import numpy as np
 import scipy as sp
 from statsmodels.stats.multitest import fdrcorrection
 import json
+import plotly.express as px
 
 # minimum number of rows (genes) to display in the table
 n_rows_min = 50
@@ -55,7 +56,7 @@ markers = {
 msize = 7.5
 
 # dropdown options
-combined_burden_type = {
+combined_burden_plot_type = {
     'total': '',
     'sample_wise': 'SAMPLE',
 }
@@ -110,7 +111,7 @@ SPECIAL_TEXT = 'Sample-wise case does not exist for Indels and Indels + Nonsynon
 col_err_sig = ','.join(col_sig.split(',')[:-1]) + ', {})'.format(opac_err)
 col_err_nonsig = ','.join(col_nonsig.split(',')[:-1]) + ', {})'.format(opac_err)
 
-
+# dictionaries for coding region the two dropdowns
 coding_region_burden_type = {
     'total': 'BURDEN',
     'sample_wise': 'BURDEN_SAMPLE',
@@ -134,7 +135,7 @@ combined_mutation_type = {
     'snvs': 'SNV'
 }
 
-# dictionaries for both combined coding region the two dropdowns
+# same for the combined and coding region
 scatterpoint_type = {
     "uniform_p_mid": "unif",
     "p_mid": "recalc"
@@ -164,7 +165,7 @@ def nb_pvalue_uniform_midp(k, alpha, p):
     """
     return np.random.uniform(size=k.shape) * sp.stats.nbinom.pmf(k, alpha, p) + sp.special.betainc(k + 1, alpha, 1 - p)
 
-def reformat_numbers(x, format='{:.3E}'):
+def coding_region_reformat_numbers(x, format='{:.3E}'):
     """
     Reformat numbers in an array to a specific format
     """
@@ -190,7 +191,6 @@ def generate_dig_report_dataframe_combined(
     print("this is the path to the dig results: ")
     print(path_to_dig_results)
     df = pd.read_csv(path_to_dig_results, sep='\t')
-
     # df = df.iloc[:20]
     # Adding indicator of genes being part of the CGC or PanCan list
     df['CGC'] = df['GENE'].isin(cgc_list)
@@ -455,7 +455,7 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
     plot_data = {}
     
     mut_val = combined_mutation_type[mut_key]
-    bur_val = combined_burden_type[bur_key]
+    bur_val = combined_burden_plot_type[bur_key]
     display_bounds_val = display_bounds_type[display_bounds_key]
     scatterpoint_val = scatterpoint_type[scatterpoint_key]
     display_labels_val = display_labels_type[display_labels_key]
@@ -711,6 +711,7 @@ def generate_coding_region_plot_data(
     if display_bounds:
         df_kept['FDR_' + mut + '_' + bur + '_lower'] = fdrcorrection(df_kept[col_pval + '_lower'])[1]
         df_kept['FDR_' + mut + '_' + bur + '_upper'] = fdrcorrection(df_kept[col_pval + '_upper'])[1]
+
     df_kept['dNdS_OBS'] = df_kept[col_obs + '_NONSYN'] / df_kept['OBS_SYN']
     df_kept['dNdS_EXP'] = df_kept['EXP_NONSYN'] / df_kept['EXP_SYN']
     df_kept = df_kept.sort_values(by='PVAL_' + mut + '_' + bur + '_' + scatterpoint, ignore_index=True)
@@ -756,15 +757,15 @@ def generate_coding_region_plot_data(
     }, inplace=True)
 
     for col in ['PVAL', 'FDR']:
-        df_plot[col] = reformat_numbers(df_plot[col].to_numpy())
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy())
     for col in ['MU', 'SIGMA']:
-        df_plot[col] = reformat_numbers(df_plot[col].to_numpy(), format='{:.2f}')
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy(), format='{:.2f}')
     for col in ['dNdS_EXP', 'EXP']:
-        df_plot[col] = reformat_numbers(df_plot[col].to_numpy(), format='{:.3f}')
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy(), format='{:.3f}')
 
     df_plot['OBS'] = df_plot['OBS'].astype(int)
     is_inf = np.logical_or(np.isinf(df_plot.dNdS_OBS.to_numpy()), np.isnan(df_plot.dNdS_OBS.to_numpy()))
-    dnds_obs = reformat_numbers(df_plot.loc[~is_inf, 'dNdS_OBS'].to_numpy().copy(), format='{:.3f}')
+    dnds_obs = coding_region_reformat_numbers(df_plot.loc[~is_inf, 'dNdS_OBS'].to_numpy().copy(), format='{:.3f}')
     df_plot['dNdS_OBS'] = df_plot['dNdS_OBS'].astype(str)
     df_plot.loc[~is_inf, 'dNdS_OBS'] = dnds_obs
     df_plot.loc[is_inf, 'dNdS_OBS'] = 'NA'
@@ -784,7 +785,6 @@ def generate_coding_region_plot_data(
             df_plot.loc[i, :] = '<b>' + df_plot.loc[i, :].astype(str) + '</b>'
     # Adding hyperlinks to a Google search for the gene names
     gene_entries = []
-
     for g in df_plot['GENE']:
         if '<b>' in g:
             g_trimmed = g.split('>')[1].split('<')[0]
@@ -830,6 +830,11 @@ def generate_coding_region_plot_data(
 
 def generate_coding_region_dig_dataframe(
         path_to_dig_results, 
+        # dir_output, 
+        # cgc_list_path, 
+        # pancan_list_path, 
+        # prefix_output=None, 
+        alp=0.1
     ):
     """ 
     
@@ -841,16 +846,14 @@ def generate_coding_region_dig_dataframe(
     # Driver gene lists
     cgc_list = pd.read_csv(cgc_list_path, sep='\t').to_numpy().flatten()
     pancan_list = pd.read_csv(pancan_list_path, sep='\t').to_numpy().flatten()
-
     # Output from DIGDriver
     df = pd.read_csv(path_to_dig_results, sep='\t')
-
     # df = df.iloc[:20]
     # Adding indicator of genes being part of the CGC or PanCan list
     df['CGC'] = df['GENE'].isin(cgc_list)
     df['PANCAN'] = df['GENE'].isin(pancan_list)
-
     muts_ts = list(coding_region_mutation_type.values())
+
     if 'EXP_INDEL' in df.columns:
         # Adding new columns for Non-synonymous SNVs + Indels
         df['OBS_MUT'] = df['OBS_NONSYN'] + df['OBS_INDEL']
@@ -934,7 +937,6 @@ def generate_coding_region_dig_dataframe(
         df[col_mut + '_unif'] = np.nan
         df[col_mut + '_lower'] = np.nan
         df[col_mut + '_upper'] = np.nan
-
         for idx in df.index:
             df.at[idx, col_mut + '_recalc'] = sp.stats.combine_pvalues(
                 [df.at[idx, 'PVAL_NONSYN_BURDEN_recalc'], df.at[idx, 'PVAL_INDEL_BURDEN_recalc']],
@@ -957,11 +959,12 @@ def generate_coding_region_report(
         mut_key, 
         bur_key, 
         display_bounds_key, 
-        scatterpoint_key
+        scatterpoint_key,
+        alp=0.1
     ):
     # prepare plot data for all combinations of mut_type and burden_type dropdown options
     plot_data = {}
-    alp = 0.1
+    # alp = 0.1
     df = df.copy()
     text_special = ""
     mut_val = coding_region_mutation_type[mut_key]
@@ -1074,7 +1077,7 @@ def generate_coding_region_report(
                 hoverinfo='skip'
             )
         )
-
+        
         volcano_fig.add_trace(
             go.Scatter(
                 x=[0, np.max(logfc) * (1 + hor_buffer)],
@@ -1252,7 +1255,6 @@ def generate_coding_region_report(
         dnds_labels = df_kept['GENE'][~ind_isna].to_numpy()
         xmax = np.max(dnds_exp) * (1 + hor_buffer)
         ind_psel = dnds_obs > dnds_exp
-
         dnds_fig = go.Figure()
         dnds_fig.add_trace(
             go.Scatter(
@@ -1347,3 +1349,567 @@ def generate_coding_region_report(
     )
 
     return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special
+
+# 3 prime utr report results
+def generate_dig_3_prime_utr_report(
+                                path_to_dig_results, 
+                                    ):
+    # Driver gene lists
+    cgc_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
+    pancan_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
+
+    cgc_list = pd.read_csv(cgc_list_path, sep='\t').to_numpy().flatten()
+    pancan_list = pd.read_csv(pancan_list_path, sep='\t').to_numpy().flatten()
+    # Output from DIGDriver
+    df = pd.read_csv(path_to_dig_results, sep='\t')
+    # Extract gene name and Ensembl ID
+    df['GENE'] = df.ELT.str.split('::', expand=True)[2]
+    df['ENSEMBL_ID'] = df.ELT.str.split('::', expand=True)[3]
+    # df = df.iloc[:20]
+    # Adding indicator of genes being part of the CGC or PanCan list
+    df['CGC'] = df['GENE'].isin(cgc_list)
+    df['PANCAN'] = df['GENE'].isin(pancan_list)
+    if 'EXP_INDEL' in df.columns:
+        # Adding new columns for Non-synonymous SNVs + Indels
+        df['OBS_MUT'] = df['OBS_SNV'] + df['OBS_INDEL']
+        df['EXP_MUT'] = df['EXP_SNV'] + df['EXP_INDEL']
+        # Computing lower and upper bounds for the p-values
+        pfxs_obs = ['SNV', 'INDEL', 'SAMPLES', 'MUT']
+        pfxs_pval = ['SNV', 'INDEL', 'SAMPLE', 'MUT']
+        pfxs_pi = ['SUM', 'INDEL', 'SUM', 'MUT']
+        pfxs_at = ['', '_INDEL', '', '', '']
+    else:
+        for key in list(combined_mutation_type.keys()):
+            if 'indel' in key.lower():
+                del combined_mutation_type[key]
+        pfxs_obs = ['SNV', 'SAMPLES']
+        pfxs_pval = ['SNV', 'SAMPLE']
+        pfxs_pi = ['SUM', 'SUM']
+        pfxs_at = ['', '']
+
+    for i in range(len(pfxs_obs)):
+        if pfxs_obs[i] == 'MUT':
+            col_i = 'PVAL_' + pfxs_pval[i] + '_BURDEN'
+            df[col_i + '_recalc'] = np.nan
+            df[col_i + '_unif'] = np.nan
+            df[col_i + '_lower'] = np.nan
+            df[col_i + '_upper'] = np.nan
+            for idx in df.index:
+                df.at[idx, col_i + '_recalc'] = sp.stats.combine_pvalues(
+                    [df.at[idx, 'PVAL_SNV_BURDEN_recalc'], df.at[idx, 'PVAL_INDEL_BURDEN_recalc']],
+                    method='fisher')[1]
+                df.at[idx, col_i + '_unif'] = sp.stats.combine_pvalues(
+                    [df.at[idx, 'PVAL_SNV_BURDEN_unif'], df.at[idx, 'PVAL_INDEL_BURDEN_unif']],
+                    method='fisher')[1]
+                df.at[idx, col_i + '_lower'] = sp.stats.combine_pvalues(
+                    [df.at[idx, 'PVAL_SNV_BURDEN_lower'], df.at[idx, 'PVAL_INDEL_BURDEN_lower']],
+                    method='fisher')[1]
+                df.at[idx, col_i + '_upper'] = sp.stats.combine_pvalues(
+                    [df.at[idx, 'PVAL_SNV_BURDEN_upper'], df.at[idx, 'PVAL_INDEL_BURDEN_upper']],
+                    method='fisher')[1]
+
+        else:
+            df['PVAL_' + pfxs_pval[i] + '_BURDEN_recalc'] = nb_pvalue_greater_midp(
+                df['OBS_' + pfxs_obs[i]],
+                df['ALPHA' + pfxs_at[i]],
+                1 / (df['THETA' + pfxs_at[i]] * df['Pi_' + pfxs_pi[i]] + 1)
+            )
+            df['PVAL_' + pfxs_pval[i] + '_BURDEN_unif'] = nb_pvalue_uniform_midp(
+                df['OBS_' + pfxs_obs[i]],
+                df['ALPHA' + pfxs_at[i]],
+                1 / (df['THETA' + pfxs_at[i]] * df['Pi_' + pfxs_pi[i]] + 1)
+            )
+            df['PVAL_' + pfxs_pval[i] + '_BURDEN_lower'] = nb_pvalue_lower(
+                df['OBS_' + pfxs_obs[i]],
+                df['ALPHA' + pfxs_at[i]],
+                1 / (df['THETA' + pfxs_at[i]] * df['Pi_' + pfxs_pi[i]] + 1)
+            )
+            df['PVAL_' + pfxs_pval[i] + '_BURDEN_upper'] = nb_pvalue_upper(
+                df['OBS_' + pfxs_obs[i]],
+                df['ALPHA' + pfxs_at[i]],
+                1 / (df['THETA' + pfxs_at[i]] * df['Pi_' + pfxs_pi[i]] + 1)
+            )
+
+    return df
+
+def generate_3_prime_utr_plot_data(df, mut, bur, display_bounds, scatterpoint, alp=0.1):
+    """
+    Given a mutation type and a burden type, generate the data for the volcano plot, Q-Q plot, and table plot
+    :param mut: str, mutation type
+    :param bur: str, burden type
+    :param display_bounds: bool, whether to display the bounds of the p-values
+    :param scatterpoint: str, type of p-values to use
+    """
+    col_obs = 'OBS_' + mut if (bur == 'BURDEN') else 'OBS_SAMPLES'
+    col_exp = 'EXP_' + mut
+    col_pval = 'PVAL_' + (mut + '_' if bur == 'BURDEN' else '') + bur
+
+    # subsetting to only those genes for which the expected nuber of mutations is greater than 0
+    ind_keep = df[col_exp] > 0
+    df_kept = df.loc[ind_keep].copy()
+
+    df_kept['LOGFC_' + mut + '_' + bur] = np.log2(df_kept[col_obs] / df_kept[col_exp] + 1)
+    # df_kept['FDR_' + mut + '_' + bur] = fdrcorrection(df_kept[col_pval])[1]
+    df_kept['FDR_' + mut + '_' + bur + '_' + scatterpoint] = fdrcorrection(df_kept[col_pval + '_' + scatterpoint])[1]
+
+    if display_bounds:
+        df_kept['FDR_' + mut + '_' + bur + '_lower'] = fdrcorrection(df_kept[col_pval + '_lower'])[1]
+        df_kept['FDR_' + mut + '_' + bur + '_upper'] = fdrcorrection(df_kept[col_pval + '_upper'])[1]
+    df_kept = df_kept.sort_values(by=col_pval + '_' + scatterpoint, ignore_index=True)
+    df_kept['RANK'] = df_kept.index + 1
+
+    labels = df_kept.GENE.to_numpy()
+    logfc = df_kept['LOGFC_' + mut + '_' + bur].to_numpy()
+    pvals = df_kept[col_pval + '_' + scatterpoint].to_numpy()
+    if display_bounds:
+        pval_bounds = df_kept[[col_pval + '_lower', col_pval + '_upper']].to_numpy()
+    else:
+        pval_bounds = None
+    qvals = df_kept['FDR_' + mut + '_' + bur + '_' + scatterpoint].to_numpy()
+    logq = -np.log10(qvals)
+    if display_bounds:
+        logq_bounds = -np.log10(
+        df_kept[['FDR_' + mut + '_' + bur + '_lower', 'FDR_' + mut + '_' + bur + '_upper']].to_numpy())
+    else:
+        logq_bounds = None
+
+    # Determine significant points
+    ind_sig = qvals < alp
+    ind_lfc = np.abs(logfc) > logfc_thr
+    ind_kept = np.logical_and(ind_sig, ind_lfc)
+
+    # Dataframe for the plot
+    cols_kept = [
+        'RANK', 'GENE', 'ELT_SIZE',
+        col_pval + '_' + scatterpoint,
+        'FDR_' + mut + '_' + bur + '_' + scatterpoint,
+        col_obs,
+        col_exp,
+        'MU', 'SIGMA',
+        'FLAG', 'CGC', 'PANCAN']
+    n_rows = max(n_rows_min, int(np.sum(ind_sig) * (1 + n_rows_buffer)))
+    df_plot = df_kept.iloc[:n_rows][cols_kept].copy()
+    df_plot.rename(columns={
+        'ELT_SIZE': 'SIZE',
+        col_pval + '_' + scatterpoint: 'PVAL',
+        'FDR_' + mut + '_' + bur + '_' + scatterpoint: 'FDR',
+        col_obs: 'OBS',
+        col_exp: 'EXP'
+    }, inplace=True)
+
+    for col in ['PVAL', 'FDR']:
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy())
+    for col in ['MU', 'SIGMA']:
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy(), format='{:.2f}')
+    for col in ['EXP']:
+        df_plot[col] = coding_region_reformat_numbers(df_plot[col].to_numpy(), format='{:.3f}')
+
+    is_flagged = df_plot['FLAG'].astype(str).str.title() == 'True'
+    df_plot['FLAG'] = is_flagged
+    df_plot.loc[is_flagged, 'GENE'] = df_plot['GENE'][is_flagged] + '*'
+
+    # Generate table figure
+    headerColor = 'grey'
+    rowEvenColor = 'lightgrey'
+    rowOddColor = 'white'
+    cols_specific = ['PVAL', 'FDR', 'OBS', 'EXP']
+    # Making the significant rows bold
+    df_plot = df_plot.astype(str)
+    for i in range(df_plot.shape[0]):
+        if ind_kept[i]:
+            df_plot.loc[i, :] = '<b>' + df_plot.loc[i, :].astype(str) + '</b>'
+    # Adding hyperlinks to a Google search for the gene names
+    gene_entries = []
+    for g in df_plot['GENE']:
+        if '<b>' in g:
+            g_trimmed = g.split('>')[1].split('<')[0]
+        else:
+            g_trimmed = g
+        gene_entries.append(
+            f'<a href="https://www.google.com/search?q={g_trimmed}+gene+cancer" target="_blank">{g}</a>')
+    # df_plot['GENE'] = gene_entries
+    # df_plot = df_plot[['RANK', 'GENE', 'OBS']]
+
+    table_fig = go.Figure(data=[go.Table(
+        header=dict(values=['<b>' + col + '</b>' for col in df_plot.columns],
+                    line_color='darkslategray',
+                    fill_color=headerColor,
+                    align=['left'] + ['center'] * (len(df_plot.columns)-1),
+                    font=dict(color='white', size=12)
+                    ),
+        cells=dict(values=[df_plot[col].tolist() for col in df_plot.columns],
+                    line_color='darkslategray',
+                    fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_plot.shape[0])]],
+                    align=['left'] + ['center'] * (len(df_plot.columns)-1),
+                    font=dict(color='darkslategray', size=11),
+                    # format = ['html'] * len(df_plot.columns)  # Enable HTML formatting
+                    )
+    )
+    ])
+    table_fig.update_layout(
+        annotations=[
+            dict(
+                text="*FLAG=TRUE: At least one kilobase-scale region overlapped by gene is <50% uniquely mappable or in the top 99.99th percentile of mutation rate.",
+                x=0,
+                y=-0.15,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                align="left",
+                valign="top",
+                font=dict(size=12)
+            )
+        ]
+    )
+
+    return df_kept, pvals, pval_bounds, logfc, logq, logq_bounds, labels, ind_kept, table_fig
+
+def generate_dig_non_coding_plots(df, mut_key, bur_key, display_bounds_key, scatterpoint_key, alp=0.1):
+    # prepare plot data for all combinations of mut_type and burden_type dropdown options
+    plot_data = {}
+    mut_val = combined_mutation_type[mut_key]
+    bur_val = coding_region_burden_type[bur_key]
+    display_bounds_val = display_bounds_type[display_bounds_key] 
+    scatterpoint_val = scatterpoint_type[scatterpoint_key]
+    text_special = ""
+   
+    if not (mut_key in ['indels', 'indels_snvs', 'mutations'] and bur_key == 'sample_wise'):
+        df_kept, pvals, pval_bounds, logfc, logq, logq_bounds, labels, ind_kept, table_fig = generate_3_prime_utr_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
+
+        # Volcano Plot
+
+        # Scatter plots
+        ind_capped = logq > ymax
+        ind_ncapped = np.logical_and(ind_kept, ~ind_capped)
+        labels_capped = labels[ind_capped].tolist()
+        logfc_capped = logfc[ind_capped].tolist()
+        logq_capped = logq[ind_capped].tolist()
+        if display_bounds_val:
+            logq_upper = logq_bounds[:, 0] - logq
+            logq_lower = logq - logq_bounds[:, 1]
+            dict_erry_sig = dict(
+                type='data',
+                symmetric=False,
+                array=np.round(logq_upper[ind_ncapped], 3).tolist(),
+                arrayminus=np.round(logq_lower[ind_ncapped], 3).tolist(),
+                thickness=thk_err,
+                width=wid_err,
+                color=col_err_sig
+            )
+            dict_erry_nonsig = dict(
+                type='data',
+                symmetric=False,
+                array=np.round(logq_upper[~ind_kept], 3).tolist(),
+                arrayminus=np.round(logq_lower[~ind_kept], 3).tolist(),
+                thickness=thk_err,
+                width=wid_err,
+                color=col_err_nonsig
+            )
+            logq_upper_capped = logq_upper[ind_capped].tolist()
+            logq_lower_capped = logq_lower[ind_capped].tolist()
+            labels_capped = [(
+                f"({logfc_capped[i]:.3f}, {logq_capped[i]:.3f} +{logq_upper_capped[i]:.3f} / -{logq_lower_capped[i]:.3f})<br>{l}")
+                for i, l in enumerate(labels_capped)]
+            ylim_upper = min(np.max(logq_upper + logq), ymax) * (1 + hor_buffer)
+        else:
+            dict_erry_sig, dict_erry_nonsig = None, None
+            labels_capped = [(
+                f"({logfc_capped[i]:.3f}, {logq_capped[i]:.3f})<br>{l}")
+                for i, l in enumerate(labels_capped)]
+            ylim_upper = min(np.max(logq), ymax) * (1 + hor_buffer)
+
+        volcano_fig = go.Figure()
+        volcano_fig.add_trace(
+            go.Scatter(
+                x=logfc[~ind_kept].tolist(),
+                y=logq[~ind_kept].tolist(),
+                error_y=dict_erry_nonsig,
+                mode='markers',
+                marker=dict(color=col_nonsig, opacity=opac_nonsig),
+                text=labels[~ind_kept].tolist(),
+                name='Non-significant',
+                showlegend=False,
+                xhoverformat='.3f',
+                yhoverformat='.3f'
+            )
+        )
+
+        volcano_fig.add_trace(
+            go.Scatter(
+                x=logfc[ind_ncapped].tolist(),
+                y=logq[ind_ncapped].tolist(),
+                error_y=dict_erry_sig,
+                mode='markers',
+                marker=dict(color=col_sig, opacity=opac_sig),
+                text=labels[ind_ncapped].tolist(),
+                name='Significant',
+                showlegend=False,
+                xhoverformat='.3f',
+                yhoverformat='.3f'
+            )
+        )
+
+        volcano_fig.add_trace(
+            go.Scatter(
+                x=logfc[ind_capped].tolist(),
+                y=[ymax] * sum(ind_capped),
+                mode='markers',
+                marker=dict(color=col_sig, opacity=opac_sig),
+                text=labels_capped,
+                name='Significant',
+                showlegend=False,
+                hoverinfo='name+text',
+            )
+        )
+
+        # Line plots
+        volcano_fig.add_trace(
+            go.Scatter(
+                x=[1, 1],
+                y=[0, ylim_upper],
+                mode='lines',
+                line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
+                showlegend=False,
+                hoverinfo='skip'
+            )
+        )
+        volcano_fig.add_trace(
+            go.Scatter(
+                x=[0, np.max(logfc) * (1 + hor_buffer)],
+                y=[-np.log10(alp), -np.log10(alp)],
+                mode='lines',
+                line=dict(dash=typ_thick, color=col_thick, width=thk_thick),
+                showlegend=False,
+                hoverinfo='skip'
+            )
+        )
+        if ymax < ylim_upper:
+            volcano_fig.add_trace(
+                go.Scatter(
+                    x=[0, np.max(logfc) * (1 + hor_buffer)],
+                    y=[ymax] * 2,
+                    mode='lines',
+                    line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
+                    showlegend=False,
+                    hoverinfo='skip'
+                )
+            )
+
+        # Formatting the figure
+        volcano_fig.update_layout(
+            title='Observed/Expected counts vs. False Discovery Rate:',
+            xaxis_title='Log2(Observed/Expected + 1)',
+            yaxis_title='-Log10(FDR)',
+            xaxis=dict(range=[0, np.max(logfc) * (1 + hor_buffer)]),
+            yaxis=dict(range=[0, ylim_upper]),
+            template='plotly_white'
+        )
+
+        # Q-Q Plot
+
+        # Scatter plots
+        x = -np.log10(np.arange(1, len(pvals) + 1) / (len(pvals) + 1))
+        y = -np.log10(pvals)
+        ind_capped = y > ymax
+        ind_ncapped = np.logical_and(ind_kept, ~ind_capped)
+        labels_capped = labels[ind_capped].tolist()
+        x_capped = x[ind_capped].tolist()
+        y_capped = y[ind_capped].tolist()
+
+        if display_bounds_val:
+            y_upper = -np.log10(pval_bounds[:, 0]) - y
+            y_lower = y + np.log10(pval_bounds[:, 1])
+            dict_erry_sig = dict(
+                type='data',
+                symmetric=False,
+                array=np.round(y_upper[ind_ncapped], 3).tolist(),
+                arrayminus=np.round(y_lower[ind_ncapped], 3).tolist(),
+                thickness=thk_err,
+                width=wid_err,
+                color=col_err_sig
+            )
+            dict_erry_nonsig = dict(
+                type='data',
+                symmetric=False,
+                array=np.round(y_upper[~ind_kept], 3).tolist(),
+                arrayminus=np.round(y_lower[~ind_kept], 3).tolist(),
+                thickness=thk_err,
+                width=wid_err,
+                color=col_err_nonsig
+            )
+            y_upper_capped = y_upper[ind_capped].tolist()
+            y_lower_capped = y_lower[ind_capped].tolist()
+            labels_capped = [(
+                f"({x_capped[i]:.3f}, {y_capped[i]:.3f} +{y_upper_capped[i]:.3f} / -{y_lower_capped[i]:.3f})<br>{l}")
+                for i, l in enumerate(labels_capped)]
+            ylim_upper = min(np.max(y_upper + y), ymax) * (1 + hor_buffer)
+        else:
+            dict_erry_sig, dict_erry_nonsig = None, None
+            labels_capped = [(
+                f"({x_capped[i]:.3f}, {y_capped[i]:.3f})<br>{l}")
+                for i, l in enumerate(labels_capped)]
+            ylim_upper = min(np.max(y), ymax) * (1 + hor_buffer)
+
+        xi = np.arange(1, len(pvals) + 1)
+        clower = -np.log10(sp.stats.beta.ppf((1 - ci) / 2, xi, xi[::-1]))
+        cupper = -np.log10(sp.stats.beta.ppf((1 + ci) / 2, xi, xi[::-1]))
+
+        qq_fig = go.Figure()
+        qq_fig.add_trace(
+            go.Scatter(
+                x=x[~ind_kept].tolist(),
+                y=y[~ind_kept].tolist(),
+                error_y=dict_erry_nonsig,
+                mode='markers',
+                marker=dict(color=col_nonsig, opacity=opac_nonsig),
+                text=labels[~ind_kept].tolist(),
+                name='Non-significant',
+                showlegend=False,
+                xhoverformat='.3f',
+                yhoverformat='.3f'
+            )
+        )
+
+        qq_fig.add_trace(
+            go.Scatter(
+                x=x[ind_ncapped].tolist(),
+                y=y[ind_ncapped].tolist(),
+                error_y=dict_erry_sig,
+                mode='markers',
+                marker=dict(color=col_sig, opacity=opac_sig),
+                text=labels[ind_ncapped].tolist(),
+                name='Significant',
+                showlegend=False,
+                xhoverformat='.3f',
+                yhoverformat='.3f'
+            )
+        )
+
+        qq_fig.add_trace(
+            go.Scatter(
+                x=x_capped,
+                y=[ymax] * sum(ind_capped),
+                mode='markers',
+                marker=dict(color=col_sig, opacity=opac_sig),
+                text=labels_capped,
+                name='Significant',
+                showlegend=False,
+                hoverinfo='name+text',
+            )
+        )
+
+        # Line plots
+        qq_fig.add_trace(
+            go.Scatter(
+                x=[0, np.max(x)],
+                y=[0, np.max(x)],
+                mode='lines',
+                line=dict(dash=typ_thick, color=col_thick, width=thk_thick),
+                showlegend=False,
+                hoverinfo='skip'
+            )
+        )
+        if ymax < ylim_upper:
+            qq_fig.add_trace(
+                go.Scatter(
+                    x=[0, np.max(x) * (1 + hor_buffer)],
+                    y=[ymax] * 2,
+                    mode='lines',
+                    line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
+                    showlegend=False,
+                    hoverinfo='skip'
+                )
+            )
+
+        # Area of confidence intervals for the identity line
+        qq_fig.add_trace(go.Scatter(
+            x=np.concatenate([x, x[::-1]]).tolist(),  # Combine x values for fill
+            y=np.concatenate([clower, cupper[::-1]]).tolist(),  # Combine y values for fill
+            fill='toself',
+            fillcolor=col_beta,
+            line=dict(color='rgba(255,255,255,0)'),  # No line for the filled area
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+
+        # Formatting the figure
+        qq_fig.update_layout(
+            title='QQ-Plot of P-values:',
+            xaxis_title='Expected -Log10(P-value)',
+            yaxis_title='Observed -Log10(P-value)',
+            xaxis=dict(range=[0, np.max(x) * (1 + hor_buffer)]),
+            yaxis=dict(range=[0, ylim_upper]),
+            template='plotly_white'
+        )
+
+        # Save figures as separate data
+        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}"] = {
+            'volcano': volcano_fig.to_dict(),
+            'qq': qq_fig.to_dict(),
+            'table': table_fig.to_dict(),
+            'text': bur_key + ' Mutation Burden of ' + mut_key,
+            'textcolor': 'black-text'
+        }
+    else:
+        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}"] = {
+            'volcano': None,
+            'qq': None,
+            'dnds': None,
+            'table': None,
+            'text': SPECIAL_TEXT,
+            'textcolor': 'red-text'
+        }
+        text_special = SPECIAL_TEXT
+
+    # # convert plot data to JSON-like structure
+    # plot_data_json = json.dumps(plot_data)
+
+    # generate static figures for the default values
+    fig_mu = px.histogram(df_kept,
+                          x='MU',
+                          labels={'MU': 'MU'},
+                          opacity=opac_bar,
+                          log_y=True,
+                          color_discrete_sequence=[col_bar])
+    fig_mu.update_layout(
+        title='Mean of GP model:',
+        xaxis_title='MU (mutations per kilobase)',
+        yaxis_title='Number of genes',
+        template='plotly_white')
+
+    fig_sigma = px.histogram(df_kept,
+                             x='SIGMA',
+                             labels={'SIGMA': 'SIGMA'},
+                             opacity=opac_bar,
+                             log_y=True,
+                             color_discrete_sequence=[col_bar])
+    fig_sigma.update_layout(
+        title='Standard deviation of GP model:',
+        xaxis_title='SIGMA (mutations per kilobase)',
+        yaxis_title='Number of genes',
+        template='plotly_white')
+
+    return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special
+
+
+    # # save static figures as HTML divs
+    # fig_mu_html = fig_mu.to_html(full_html=False, include_plotlyjs='cdn')
+    # fig_sigma_html = fig_sigma.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # # combine everything into the final HTML
+    # html_content = html_content.format(
+    #     name_interval_set=name_interval_set.replace("_", " ").title(),
+    #     mut_options=mut_options,
+    #     burden_options=burden_options,
+    #     display_bounds_options=display_bounds_options,
+    #     scatterpoint_options=scatterpoint_options,
+    #     plot_data=plot_data_json,
+    #     fig_mu_html=fig_mu_html,
+    #     fig_sigma_html=fig_sigma_html
+    # )
+
+    # # save to an HTML file
+    # name = '_'.join(name_interval_set.split(' ')).lower()
+    # with open(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + f'dig_report_{name}.html',
+    #           'w') as f:
+    #     f.write(html_content)

@@ -27,11 +27,10 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, combined_burden_type, combined_mutation_type, scatterpoint_type
+from SNVReviewers.AppComponents.utils import generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, scatterpoint_type
 
-CODING_REGION_DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "CHROM", "LENGTH", "FDR", "PVAL", "OBS", "EXP",
-                                         "MU", "SIGMA", "dNdS_OBS", "dNdS_EXP", "FLAG", "CGC", "PANCAN"
-                                        ]
+DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "FDR", "PVAL", "OBS", 
+                                         'EXP', 'MU', 'SIGMA', 'dNdS_OBS', 'dNdS_EXP', 'FLAG', 'CGC', 'PANCAN']
                     
 DIG_REPORT_VALUES = ["Combined", "Coding regions", "Promoter regions", "5-prime UTRs", "3-prime UTRs"]
 DIG_DATAFRAME_IDX = 0
@@ -39,6 +38,9 @@ DND_DATAFRAME_IDX = 1
 MUTSIG_DATAFRAME_IDX = 2
 SNV_DATA_COLUMN_NAME = "snv_data"
 DIG_LABEL_IDX = 1
+# MAKE RADIO ITEM FOR THE COMBINED REPORT
+    # RADIO ITEM WILL SWITCH TO THE TXT FILE THAT IS USED TO CREATE PLOTS/TABLE
+# MAKE RADIO ITEM FOR THE CODING REGION REPORT
 
 def gen_dig_app_component_data_internal_callback(
     data: GenericData,
@@ -54,23 +56,24 @@ def gen_dig_app_component_data_internal_callback(
     """
     
     """
-    # maybe make use the AnnoMate run function, described in the snv reviewer notebook
 
-    # OR CAN assign the content to the 
-
-    # defaults the dropdown to this mutation, burden, and scatterpoint type
     if mutation_type == "":
         mutation_type = 'indels_nonsynonymous_snvs'
         burden_type = 'total'
         p_val_type = 'uniform_p_mid'
 
     dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX].copy()
+    mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX].copy()
 
-    dig_df = dig_df.sort_values(by='PVAL'+ "_" + coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]+ "_" + scatterpoint_type[p_val_type])
+    if dig_label == "Coding regions":
+        dig_df = dig_df.sort_values(by='PVAL'+ "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]) #+ "_" + scatterpoint_type[p_val_type])
+    
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
     debugging_component = ""
-    dig_output_type = "Coding Region"
+    # dig_output_type = "Combined"
+    display_bounds = display_toggle_value # whether to display the bounds
     
     dir_output = "./example_notebooks/data/dig_data"
     dig_figure = go.Figure()
@@ -90,50 +93,68 @@ def gen_dig_app_component_data_internal_callback(
     else:
         display_labels_key = 'No'
 
-    df_kept, volcano_fig, qq_fig, fig_mu_fig, fig_sigma_fig, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+    # qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, 
+    #                                                                      burden_type, display_bounds, 
+    #                                                                      display_labels_key, p_val_type)
+    
 
+    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
+    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+    df_kept_new = df_kept[['dNdS_OBS', 'dNdS_EXP', 'GENE']]
     dig_data_columns = []
     
-    # for clm_nm in CODING_REGION_DIG_REPORT_COLUMN_NAMES:
-    #     dig_data_clm_dict = {}
-    #     dig_data_clm_dict["name"] = clm_nm
-    #     dig_data_clm_dict["id"] = clm_nm
+    for clm_nm in DIG_CODING_REGION_REPORT_COLUMN_NAMES:
+        dig_data_clm_dict = {}
+        dig_data_clm_dict["name"] = clm_nm
+        dig_data_clm_dict["id"] = clm_nm
 
-    #     if "PVAL" in clm_nm:
-    #         # gets the column name corresponding to the mutation type and the scatterpoint type
-    #         dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]+ "_" + scatterpoint_type[p_val_type]
+        if "PVAL" in clm_nm:
+            # gets the column name corresponding to the mutation type and the scatterpoint type
+            dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type] #+ "_" +scatterpoint_type[p_val_type]
 
-    #     dig_data_columns.append(dig_data_clm_dict)
+        elif 'FDR' in clm_nm:
+            dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+        
+        elif 'LENGTH' in clm_nm:
+            dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
+
+        elif 'OBS' in clm_nm and coding_region_mutation_type[mutation_type] != 'MUT' and coding_region_mutation_type[mutation_type] != 'dNdS':
+            dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type]
+
+        dig_data_columns.append(dig_data_clm_dict)
     
-    # for column_dict in dig_data_columns:
-    #     # gets the dig data column name
-    #     column = column_dict["id"]
+    for column_dict in dig_data_columns:
+        # gets the dig data column name
+        column = column_dict["id"]
 
-    #     # skip the rank column
-    #     if column == 'RANK':
-    #         continue
+        # skip the rank column
+        if column == 'RANK':
+            continue
 
-    #     format='{:.3E}'
+        format='{:.3E}'
 
-    #     # rounds all the values in the FDR and PVAL columns to 4 significant digits
-    #     if 'FDR' in column or 'PVAL' in column:
-    #         dig_df[column] = [format.format(value) for value in dig_df[column]]
+        # rounds all the values in the FDR and PVAL columns to 4 significant digits
+        if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column: #or 'dNdS_OBS' in column or 'dNdS_EXP' in column:
+            dig_df[column] = [format.format(value) for value in dig_df[column]]
         
     # get the coding region working plots working!!
     # get the display bounds selection tool working 
 
-    # ONLY GETTING THE FIRST 500 ROWS OF DATA TO DISPLAY IN THE TABLE
+    # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
+
+    # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
     dig_df = dig_df[:100]
 
     # wrap up the precalled purity 
+
     return [
-            df_kept.to_dict('records'),
+            dig_df.to_dict('records'),
             dig_type_selection,
-            qq_fig,
             volcano_fig,
-            fig_mu_fig,
-            fig_sigma_fig,
+            qq_fig,
+            fig_mu, 
+            fig_sigma,
             dnds_fig,
             dig_data_columns,
             mutation_type,
@@ -171,32 +192,33 @@ def gen_dig_app_component_data_external_callback(
     
     return output
 
-def gen_dig_app_coding_region_component_layout():
+def gen_dig_app_component_layout():
     """
     
     """
-    # # radio button for selecting which type of report to display
-    # dbc.RadioItems(
-    #     options=[
-    #         {
-    #             "label": v, 
-    #             "value": v
-    #         } for v in DIG_REPORT_VALUES
-    #     ],
-    #     value="Combined",
-    #     id="dig-coding-report-type-radioitems",
-    # ),
-
-
-
-    coding_region_layout = [
+    return [
             # displays the interactive component to filter the samples displays based on their purity values
             html.Div([
-                dbc.Label(children="Debugging Stuff!!!", id="debugging-coding"),    
+                dbc.Label(children="Debugging Stuff!!!", id="coding-region-debugging"),    
             ]),
 
             # Plotly Figure for the DIG Report
             html.Div([
+
+                # dbc.Row([
+                #     dbc.Col([
+                #         dbc.RadioItems(
+                #         options=[
+                #             {
+                #                 "label": val, 
+                #                 "value": val
+                #             }
+                #         ],
+                #         value="Combined",
+                #         id=f"dig-report-type-radioitems-{DIG_REPORT_VALUES[idx]}",
+                #         ),
+                #     ]) for idx, val in enumerate(DIG_REPORT_VALUES)
+                # ]),
                 
                 # radio button for selecting which type of report to display
                 dbc.RadioItems(
@@ -206,8 +228,8 @@ def gen_dig_app_coding_region_component_layout():
                             "value": v
                         } for v in DIG_REPORT_VALUES
                     ],
-                    value="Combined",
-                    id="dig-coding-report-type-radioitems",
+                    value="Coding regions",
+                    id="dig-report-coding-region-type-radioitems",
                 ),
 
                 dbc.Row([# insert the dropdown menus as columns inside this list for dbc.Row
@@ -215,16 +237,16 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting a mutation type
                         dbc.Label("Select Mutation Type"),
                         dcc.Dropdown(
-                        id='dig-coding-mutation-dropdown',
+                        id='dig-coding-region-mutation-dropdown',
                         options=[
                             {'label': 'Indels + Nonsynonymous SNVs', 'value': 'indels_nonsynonymous_snvs'},
-                            {'label': 'Indels', 'value':'indels'},
-                            {'label': 'Nonsynonymous SNVs', 'value':'nonsynonymous_snvs'},
+                            {'label': 'Indels', 'value': 'indels'},
+                            {'label': 'Nonsynonymous + SNVs', 'value': 'nonsynonymous_snvs'},
                             {'label': 'Missense SNVs', 'value': 'missense_snvs'},
                             {'label': 'Nonsense SNVs', 'value': 'nonsense_snvs'},
                             {'label': 'Truncating SNVs', 'value': 'truncating_snvs'},
                             {'label': 'Splice Site SNVs', 'value': 'splice_site_snvs'},
-                            {'label': 'Synonymous SNVs', 'value': 'synonymous_snvs'}
+                            {'label': 'Synonymous + SNVs', 'value': 'synonymous_snvs'}
                         ],
                         value='',
                         ),
@@ -233,7 +255,7 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting burden type
                         dbc.Label("Select Burden Type"),
                         dcc.Dropdown(
-                        id='dig-coding-burden-dropdown',
+                        id='dig-coding-region-burden-dropdown',
                         options=[
                             {'label': 'Total', 'value': 'total'},
                             {'label': 'Sample-wise', 'value': 'sample_wise'}
@@ -245,7 +267,7 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting burden type
                         dbc.Label("P-value Type"),
                         dcc.Dropdown(
-                        id='dig-coding-p-value-dropdown',
+                        id='dig-coding-region-p-value-dropdown',
                         options=[
                             {'label': 'Uniform P-mid', 'value': 'uniform_p_mid'},
                             {'label': 'P-mid', 'value': 'p_mid'},
@@ -258,14 +280,14 @@ def gen_dig_app_coding_region_component_layout():
                         dbc.Col([
                             # makes a toggle component
                             daq.BooleanSwitch(
-                            id='display-coding-bounds-toggle-switch',
+                            id='display-bounds-coding-region-toggle-switch',
                             label='Display Bounds',
                             on=False),
                         ]),
                         dbc.Col([
                             # makes a toggle component
                             daq.BooleanSwitch(
-                            id='display-coding-labels-toggle-switch',
+                            id='display-labels-coding-region-toggle-switch',
                             label='Display Labels',
                             on=False),
                         ])
@@ -273,21 +295,21 @@ def gen_dig_app_coding_region_component_layout():
                 ]),
 
                 html.Div([
-                    dbc.Label(id="coding-special-text-output", children=""),
+                    dbc.Label(id="coding-region-special-text-output", children=""),
                 ]),
 
-                # PLOTS ABOVE THE CODING REGION TABLE
+                # Graphs above the coding region table
                 dbc.Row([
                     dbc.Col([
-                        # creates the dig volcano plot
-                        dcc.Graph(id='dig-coding-volcano-graph', figure={}),
-
+                        # creates the dig QQ plot
+                        dcc.Graph(id='dig-qq-coding-region-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig QQ plot
-                        dcc.Graph(id='dig-coding-qq-graph', figure={}),
+                        dcc.Graph(id='dig-volcano-coding-region-graph', figure={}),
                     ])
-                ])  
+                ])
+                
             ]),
 
             html.Div(
@@ -296,8 +318,8 @@ def gen_dig_app_coding_region_component_layout():
                     dbc.Row([
                         html.Div(
                             [
-                                dbc.Label("Dig Report Table: "),
-                                html.Label(children="Combined", id="dig-coding-report-type-label"), # initialize label to empty string
+                                dbc.Label("Dig Coding Region Report Table: "),
+                                html.Label(children="Combined", id="dig-report-coding-region-type-label"), # initialize label to empty string
                             ])
                         ]),                
                     
@@ -306,12 +328,12 @@ def gen_dig_app_coding_region_component_layout():
                     children=[
                         html.H2('DIG Table'),
                         dash_table.DataTable(
-                        id='dig-report-coding-table',
+                        id='dig-report-coding-region-table',
                         columns=[
                             {"name": i,
-                                "id": i} for i in CODING_REGION_DIG_REPORT_COLUMN_NAMES
+                                "id": i} for i in DIG_CODING_REGION_REPORT_COLUMN_NAMES
                         ],
-                        data=pd.DataFrame(columns=CODING_REGION_DIG_REPORT_COLUMN_NAMES).to_dict(
+                        data=pd.DataFrame(columns=DIG_CODING_REGION_REPORT_COLUMN_NAMES).to_dict(
                             'records'),
                         editable=False,
                         filter_action="native",
@@ -335,60 +357,58 @@ def gen_dig_app_coding_region_component_layout():
                     ]
                 ),
 
-                # PLOTS BELOW THE CODING REGION TABLE
+                # Graphs above the coding region table
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
-                        dcc.Graph(id='dig-coding-fig-mu-graph', figure={}),
+                        dcc.Graph(id='dig-fig-mu-coding-region-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig fig sigma plot
-                        dcc.Graph(id='dig-coding-fig-sigma-graph', figure={}),
+                        dcc.Graph(id='dig-fig-sigma-coding-region-graph', figure={}),
                     ]),
                     dbc.Col([
-                        # creates the dig dnds plot
-                        dcc.Graph(id='dig-coding-dnds-graph', figure={}),
+                        # creates the dig dnds fig plot
+                        dcc.Graph(id='dig-dnds-fig-coding-region-graph', figure={}),
                     ])
                 ])
             ], 
         )
     ]
 
-    return coding_region_layout
-
-def gen_dig_report_coding_region_app_component():
+def gen_dig_coding_region_app_component():
     """
     
     """
     
     return AppComponent(
         name='DIG Coding Region Component',
-        layout=gen_dig_app_coding_region_component_layout(),
+        layout=gen_dig_app_component_layout(),
         new_data_callback=gen_dig_app_component_data_internal_callback,
         internal_callback=gen_dig_app_component_data_external_callback,
         callback_input=[
-            Input('dig-coding-report-type-label', 'children'),
-            Input('dig-coding-report-type-radioitems', 'value'),
-            Input('dig-coding-mutation-dropdown', 'value'),
-            Input('dig-coding-burden-dropdown', 'value'),
-            Input('dig-coding-p-value-dropdown', 'value'),
-            Input('display-coding-bounds-toggle-switch', 'on'),
-            Input('display-coding-labels-toggle-switch', 'on')
+            Input('dig-report-coding-region-type-label', 'children'),
+            Input('dig-report-coding-region-type-radioitems', 'value'),
+            Input('dig-coding-region-mutation-dropdown', 'value'),
+            Input('dig-coding-region-burden-dropdown', 'value'),
+            Input('dig-coding-region-p-value-dropdown', 'value'),
+            Input('display-bounds-coding-region-toggle-switch', 'on'),
+            Input('display-labels-coding-region-toggle-switch', 'on')
         ],
 
         callback_output=[
-            Output('dig-report-coding-table', 'data'),
-            Output('dig-coding-report-type-label', 'children'),
-            Output('dig-coding-qq-graph', 'figure'),
-            Output('dig-coding-volcano-graph', 'figure'),
-            Output('dig-coding-fig-mu-graph', 'figure'),
-            Output('dig-coding-fig-sigma-graph', 'figure'),
-            Output('dig-coding-dnds-graph', 'figure'),
-            Output('dig-report-coding-table', 'columns'),
-            Output('dig-coding-mutation-dropdown', 'value'),
-            Output('dig-coding-burden-dropdown', 'value'),
-            Output('dig-coding-p-value-dropdown', 'value'),
-            Output('coding-special-text-output', 'children'),
-            Output('debugging-coding', 'children'),
+            Output('dig-report-coding-region-table', 'data'),
+            Output('dig-report-coding-region-type-label', 'children'),
+            Output('dig-volcano-coding-region-graph', 'figure'),
+            Output('dig-qq-coding-region-graph', 'figure'),
+            Output('dig-fig-mu-coding-region-graph', 'figure'),
+            Output('dig-fig-sigma-coding-region-graph', 'figure'),
+            Output('dig-dnds-fig-coding-region-graph', 'figure'),
+            Output('dig-report-coding-region-table', 'columns'),
+            Output('dig-coding-region-mutation-dropdown', 'value'),
+            Output('dig-coding-region-burden-dropdown', 'value'),
+            Output('dig-coding-region-p-value-dropdown', 'value'),
+            Output('coding-region-special-text-output', 'children'),
+            Output('coding-region-debugging', 'children'),
         ],
     )
