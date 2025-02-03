@@ -224,14 +224,7 @@ def gen_dig_app_component_layout():
                         dcc.Dropdown(
                         id='dig-3-prime-mutation-dropdown',
                         options=[
-                            # {'label': 'Indels + Nonsynonymous SNVs', 'value': 'indels_nonsynonymous_snvs'},
-                            # {'label': 'Indels', 'value': 'indels'},
-                            # {'label': 'Nonsynonymous + SNVs', 'value': 'nonsynonymous_snvs'},
-                            # {'label': 'Missense SNVs', 'value': 'missense_snvs'},
-                            # {'label': 'Nonsense SNVs', 'value': 'nonsense_snvs'},
-                            # {'label': 'Truncating SNVs', 'value': 'truncating_snvs'},
-                            # {'label': 'Splice Site SNVs', 'value': 'splice_site_snvs'},
-                            # {'label': 'Synonymous + SNVs', 'value': 'synonymous_snvs'}
+                           
                             {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
                             {'label': 'Indels', 'value': 'indels'},
                             {'label': 'SNVs', 'value': 'snvs'}

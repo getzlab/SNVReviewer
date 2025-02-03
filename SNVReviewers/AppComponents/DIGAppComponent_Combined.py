@@ -140,6 +140,8 @@ def gen_dig_app_component_data_internal_callback(
 
     # wrap up the precalled purity 
 
+    # return all_page_content = []
+
     return [
             dig_df.to_dict('records'),
             dig_type_selection,
@@ -185,7 +187,13 @@ def gen_dig_app_component_data_external_callback(
     # HAVE A FUNCTION FOR EACH TYPE OF DIG REPORT RESULT, I.E. A FUNCTION FOR COMBINED RESULT A 
     # FUNCTION FOR CODING REGION RESULT
 
-def gen_dig_app_component_layout():
+def gen_dig_app_component_layout(mode):
+    """
+    
+    """
+    html.Div(id="final_container", children="")
+
+def gen_dig_app_combined_component_layout():
     """
     
     """
@@ -197,21 +205,6 @@ def gen_dig_app_component_layout():
 
             # Plotly Figure for the DIG Report
             html.Div([
-
-                # dbc.Row([
-                #     dbc.Col([
-                #         dbc.RadioItems(
-                #         options=[
-                #             {
-                #                 "label": val, 
-                #                 "value": val
-                #             }
-                #         ],
-                #         value="Combined",
-                #         id=f"dig-report-type-radioitems-{DIG_REPORT_VALUES[idx]}",
-                #         ),
-                #     ]) for idx, val in enumerate(DIG_REPORT_VALUES)
-                # ]),
                 
                 # radio button for selecting which type of report to display
                 dbc.RadioItems(
@@ -345,7 +338,7 @@ def gen_combined_dig_report_app_component():
     
     return AppComponent(
         name='DIG Component',
-        layout=gen_dig_app_component_layout(),
+        layout=gen_dig_app_combined_component_layout(),
         new_data_callback=gen_dig_app_component_data_internal_callback,
         internal_callback=gen_dig_app_component_data_external_callback,
         callback_input=[
