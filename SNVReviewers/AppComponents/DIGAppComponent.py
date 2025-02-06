@@ -94,6 +94,14 @@ def gen_dig_app_component_data_internal_callback(
             display_label_value
         )
 
+    # NEED TO FIGURE OUT HOW TO GET THE PROMOTER, 5 PRIME UTR REPORT TYPES WORKING
+        # LOOK AT THE WORKFLOW THAT DAVID SENT
+        # MIGHT NEED TO MAKE A SEPARATE LIST OF THE 5 DIFFERENT DATAFRAMES FOR ONE COHORT
+            # MIGHT NEED TO HAVE DIFFERENT DATA PASSED INTO THE DIFFERENT gen_xxx_app_component functions
+            # based on the data needed
+
+    # THEN START WORKING ON THE mutsig component and dndscv component
+
     elif dig_type_selection == "Promoter region":
         raise NotImplementedError
         print("I am in the promoter region")

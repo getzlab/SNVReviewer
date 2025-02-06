@@ -5,9 +5,6 @@ from dash.dependencies import State
 from rpy2.robjects import pandas2ri
 
 from SNVReviewers.AppComponents.DIGAppComponent import gen_dig_report_app_component
-from SNVReviewers.AppComponents.DIGAppComponent_Combined import gen_combined_dig_report_app_component
-from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_coding_region_app_component
-from SNVReviewers.AppComponents.DIGAppComponent_3_prime_utrs import gen_dig_3_prime_utr_app_component
 
 from AnnoMate.Data import DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp
@@ -58,6 +55,8 @@ class SNVReviewer(ReviewerTemplate):
             Minimum increment allowed for purity (default is 0.01)
         """
         app = ReviewDataApp()
+        
+        # Adds the DIG report component to the SNV Reviewer
         app.add_component(
             gen_dig_report_app_component()
         )
@@ -70,6 +69,7 @@ class SNVReviewer(ReviewerTemplate):
         """
         self.add_autofill('Hello World', State('dig-annotation-value1', 'children'), 'Annotation 1')
         self.add_autofill('Hello World 2', State('dig-annotation-value2', 'children'), 'Annotation 2')
+
 
     def set_default_review_data_annotations(self):
         """
@@ -91,13 +91,3 @@ class SNVReviewer(ReviewerTemplate):
         """
         self.add_annotation_display_component('Annotation 1', NumberAnnotationDisplay())
         self.add_annotation_display_component('Annotation 2', NumberAnnotationDisplay())        
-    
-
-# the dropdown annotation table will be each gene from the dig report
-    # make sure the dataframe index is set to the gene (
-# in the dig app component then connect the selected row to the gene selected in the table
-    # select a gene in the dropdown (gene dropdown idx is the input)
-        # loads the default table
-        # once you select a new gene the table should update the selected row to that gene idx
-
-# push the data!!

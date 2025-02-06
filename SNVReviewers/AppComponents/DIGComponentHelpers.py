@@ -361,6 +361,11 @@ def gen_prime_utr3_app_component(
         if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column:
             dig_df[column] = [format.format(value) for value in dig_df[column]]
 
+    # get the coding region working plots working!!
+    # get the display bounds selection tool working 
+
+    # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
+    # REMOVE THE DEBUGGING LATER!!! 
     dig_df = dig_df[:100]
 
     all_page_content =  [
