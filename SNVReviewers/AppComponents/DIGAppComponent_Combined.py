@@ -84,10 +84,9 @@ def gen_dig_combined_app_component_data_internal_callback(
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
     debugging_component = ""
-    dig_output_type = "Combined"
+    # dig_output_type = "Combined"
     display_bounds = display_toggle_value # whether to display the bounds
     
-    # dir_output = "./example_notebooks/data/dig_data"
     qq_fig = go.Figure()
     fig_mu = go.Figure()
     fig_sigma = go.Figure()
@@ -111,10 +110,6 @@ def gen_dig_combined_app_component_data_internal_callback(
     qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, 
                                                                             burden_type, display_bounds, 
                                                                             display_labels_key, p_val_type)
-        
-    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
-    # volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
-
     dig_data_columns = []
     
     for clm_nm in DIG_REPORT_COMBINED_COLUMN_NAMES:
@@ -161,6 +156,10 @@ def gen_dig_combined_app_component_data_internal_callback(
                 COMBINED_MUT_DROPDOWN,
                 COMBINED_BUR_DROPDOWN,
                 COMBINED_SCATTER_DROPDOWN, 
+
+                # changing the plot size and the visibility of the plots
+                {'width':'1200px'},
+                {'display':'none'}, # hides the volcano plot
                 text_special,
                 debugging_component
             ]
@@ -270,19 +269,17 @@ def gen_dig_app_combined_component_layout():
                     dbc.Label(id="special-text-output", children=""),
                 ]),
             
-                # # creates the dig QQ plot
-                # dcc.Graph(id='dig-qq-graph', figure={}),
-                # Graphs above the coding region table
+                # Graphs above the combined table
                 dbc.Row([
                     dbc.Col([
                         # creates the dig QQ plot
-                        # dcc.Graph(id='dig-qq-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-qq-graph', figure={}),
                     ]),
                     dbc.Col([
-                        # creates the dig QQ plot
-                        # dcc.Graph(id='dig-volcano-coding-region-graph', figure={}),
-                        dcc.Graph(id='dig-volcano-graph', figure={}),
+                        # creates the dig volcano plot
+                        dcc.Graph(id='dig-volcano-graph', 
+                                  figure={},
+                                  style={'display':'none'}),
                     ])
                 ])
             ]),
@@ -335,17 +332,14 @@ def gen_dig_app_combined_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
-                        # dcc.Graph(id='dig-fig-mu-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-fig-mu-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig fig sigma plot
-                        # dcc.Graph(id='dig-fig-sigma-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-fig-sigma-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig dnds fig plot
-                        # dcc.Graph(id='dig-dnds-fig-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-dnds-fig-graph', figure={}),
                     ])
                 ])
@@ -400,6 +394,11 @@ def gen_combined_dig_report_app_component():
             Output('dig-mutation-dropdown', 'options'),
             Output('dig-burden-dropdown', 'options'),
             Output('dig-p-value-dropdown', 'options'),
+
+            # changing the style of the plots to hide and unhide them
+            Output('dig-qq-graph', 'style'),
+            Output('dig-volcano-graph', 'style'),
+
             Output('special-text-output', 'children'),
             Output('debugging', 'children'),
         ],

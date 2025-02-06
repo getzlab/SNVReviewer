@@ -75,7 +75,7 @@ def gen_dig_coding_region_app_component_data_internal_callback(
     """
 
     # check if mutation_type is an old dropdown menu option
-    
+
     if mutation_type == "":
         mutation_type = 'indels_nonsynonymous_snvs'
         burden_type = 'total'
@@ -170,6 +170,11 @@ def gen_dig_coding_region_app_component_data_internal_callback(
             CODING_REGION_MUT_DROPDOWN,
             CODING_REGION_BUR_DROPDOWN,
             CODING_REGION_SCATTER_DROPDOWN, 
+
+            # changing the plot size and the visibility of the plots
+            {'width':'550px'},
+            # {'display':'inline-block'}, # displays the volcano plot
+            {'display':'inline-block', 'width':'550px'}, # displays the volcano plot
             text_special,
             debugging_component,
         ]
@@ -209,7 +214,6 @@ def gen_dig_app_coding_region_component_layout():
     return [
             # displays the interactive component to filter the samples displays based on their purity values
             html.Div([
-                # dbc.Label(children="Debugging Stuff!!!", id="coding-region-debugging"),  
                 dbc.Label(children="Debugging Stuff!!!", id="debugging"),    
             ]),
 
@@ -224,7 +228,6 @@ def gen_dig_app_coding_region_component_layout():
                         } for v in DIG_REPORT_VALUES
                     ],
                     value="Coding regions",
-                    # id="dig-report-coding-region-type-radioitems",
                     id="dig-report-type-radioitems",
                 ),
 
@@ -233,7 +236,6 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting a mutation type
                         dbc.Label("Select Mutation Type"),
                         dcc.Dropdown(
-                        # id='dig-coding-region-mutation-dropdown',
                         id='dig-mutation-dropdown',
                         options=CODING_REGION_MUT_DROPDOWN,
                         value='',
@@ -243,7 +245,6 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting burden type
                         dbc.Label("Select Burden Type"),
                         dcc.Dropdown(
-                        # id='dig-coding-region-burden-dropdown',
                         id='dig-burden-dropdown',
                         options=CODING_REGION_BUR_DROPDOWN,
                         value=''
@@ -253,7 +254,6 @@ def gen_dig_app_coding_region_component_layout():
                         # dropdown for selecting burden type
                         dbc.Label("P-value Type"),
                         dcc.Dropdown(
-                        # id='dig-coding-region-p-value-dropdown',
                         id='dig-p-value-dropdown',
                         options=CODING_REGION_SCATTER_DROPDOWN,
                         value=''),
@@ -264,7 +264,6 @@ def gen_dig_app_coding_region_component_layout():
                         dbc.Col([
                             # makes a toggle component
                             daq.BooleanSwitch(
-                            # id='display-bounds-coding-region-toggle-switch',
                             id='display-bounds-toggle-switch',
                             label='Display Bounds',
                             on=False),
@@ -272,7 +271,6 @@ def gen_dig_app_coding_region_component_layout():
                         dbc.Col([
                             # makes a toggle component
                             daq.BooleanSwitch(
-                            # id='display-labels-coding-region-toggle-switch',
                             id='display-labels-toggle-switch',
                             label='Display Labels',
                             on=False),
@@ -281,7 +279,6 @@ def gen_dig_app_coding_region_component_layout():
                 ]),
                 # Warning for doing specific dropdown menu combinations
                 html.Div([
-                    # dbc.Label(id="coding-region-special-text-output", children=""),
                     dbc.Label(id="special-text-output", children=""),
                 ]),
 
@@ -289,13 +286,13 @@ def gen_dig_app_coding_region_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig QQ plot
-                        # dcc.Graph(id='dig-qq-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-qq-graph', figure={}),
                     ]),
                     dbc.Col([
-                        # creates the dig QQ plot
-                        # dcc.Graph(id='dig-volcano-coding-region-graph', figure={}),
-                        dcc.Graph(id='dig-volcano-graph', figure={}),
+                        # creates the dig volcano plot
+                        dcc.Graph(id='dig-volcano-graph', 
+                                  figure={},
+                                  ),
                     ])
                 ])
             ]),
@@ -307,7 +304,6 @@ def gen_dig_app_coding_region_component_layout():
                         html.Div(
                             [
                                 dbc.Label("Dig Coding Region Report Table: "),
-                                # html.Label(children="Combined", id="dig-report-coding-region-type-label"), # initialize label to empty string
                                 html.Label(children="Coding Region", id="dig-report-type-label"), # initialize label to empty string
                             ])
                         ]),                
@@ -350,17 +346,14 @@ def gen_dig_app_coding_region_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
-                        # dcc.Graph(id='dig-fig-mu-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-fig-mu-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig fig sigma plot
-                        # dcc.Graph(id='dig-fig-sigma-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-fig-sigma-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig dnds fig plot
-                        # dcc.Graph(id='dig-dnds-fig-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-dnds-fig-graph', figure={}),
                     ])
                 ])

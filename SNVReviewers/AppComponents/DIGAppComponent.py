@@ -65,8 +65,7 @@ def gen_dig_app_component_data_internal_callback(
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
 
-
-        # PUT THESE FUNCTIONS INTO A HELPER FILE AND IMPORT FOR A
+        # PUT THESE FUNCTIONS INTO A HELPER FILE AND IMPORT FOR SINGLE FILE
         all_page_content = gen_dig_combined_app_component_data_internal_callback(
             data,
             idx,
@@ -218,13 +217,22 @@ def gen_dig_app_component_layout():
                 ]),
                 # Graphs above the coding region table
                 dbc.Row([
+
+                    
                     dbc.Col([
                         # creates the dig QQ plot
-                        dcc.Graph(id='dig-qq-graph', figure={}),
+                        dcc.Graph(id='dig-qq-graph', 
+                                  figure={},
+                                  style={"width":"1200px"} # increases the size of the plot
+                                ), 
                     ]),
+                    # can hide the plots depending on the report
                     dbc.Col([
                         # creates the dig QQ plot
-                        dcc.Graph(id='dig-volcano-graph', figure={}),
+                        dcc.Graph(id='dig-volcano-graph', 
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                  ),
                     ])
                 ])
             ]),
@@ -350,6 +358,10 @@ def gen_dig_report_app_component():
             Output('dig-mutation-dropdown', 'options'),
             Output('dig-burden-dropdown', 'options'),
             Output('dig-p-value-dropdown', 'options'),
+
+            # changing the style of the plots to hide and unhide them
+            Output('dig-qq-graph', 'style'),
+            Output('dig-volcano-graph', 'style'),
 
             Output('special-text-output', 'children'),
             Output('debugging', 'children'),
