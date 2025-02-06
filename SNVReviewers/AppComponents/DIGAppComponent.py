@@ -27,6 +27,7 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
+from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component
 from SNVReviewers.AppComponents.DIGAppComponent_Combined import gen_dig_combined_app_component_data_internal_callback, gen_combined_dig_report_app_component, COMBINED_MUT_DROPDOWN, COMBINED_BUR_DROPDOWN, COMBINED_SCATTER_DROPDOWN
 from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_coding_region_app_component_data_internal_callback, gen_dig_coding_region_app_component, gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
 from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, combined_mutation_type, scatterpoint_type
@@ -65,11 +66,8 @@ def gen_dig_app_component_data_internal_callback(
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
 
-        # PUT THESE FUNCTIONS INTO A HELPER FILE AND IMPORT FOR SINGLE FILE
-        all_page_content = gen_dig_combined_app_component_data_internal_callback(
+        all_page_content = gen_combined_app_component(
             data,
-            idx,
-            dig_label,
             dig_type_selection, 
             mutation_type,
             burden_type,
@@ -85,10 +83,8 @@ def gen_dig_app_component_data_internal_callback(
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
 
-        all_page_content = gen_dig_coding_region_app_component_data_internal_callback(
+        all_page_content = gen_coding_region_app_component(
             data,
-            idx,
-            dig_label,
             dig_type_selection, 
             mutation_type,
             burden_type,
@@ -110,36 +106,6 @@ def gen_dig_app_component_data_internal_callback(
         print("I am in the 3 prime utrs region")  
 
     return all_page_content
-
-def gen_dig_app_component_data_external_callback(
-    data: GenericData,
-    idx,
-    dig_label,
-    dig_type_selection,
-    mutation_type,
-    burden_type,
-    p_val_type,
-    display_toggle_value, 
-    display_label_value
-):
-    """
-
-    """
-    output = gen_dig_app_component_data_internal_callback(
-                data,
-                idx,
-                dig_label,
-                dig_type_selection, 
-                mutation_type,
-                burden_type,
-                p_val_type,
-                display_toggle_value,
-                display_label_value
-            )
-    
-    return output
-
-
 
 def gen_dig_app_component_layout():
     """
@@ -285,18 +251,24 @@ def gen_dig_app_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
-                        # dcc.Graph(id='dig-fig-mu-coding-region-graph', figure={}),
-                        dcc.Graph(id='dig-fig-mu-graph', figure={}),
+                        dcc.Graph(id='dig-fig-mu-graph', 
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                  ),
                     ]),
                     dbc.Col([
                         # creates the dig fig sigma plot
-                        # dcc.Graph(id='dig-fig-sigma-coding-region-graph', figure={}),
-                        dcc.Graph(id='dig-fig-sigma-graph', figure={}),
+                        dcc.Graph(id='dig-fig-sigma-graph', 
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                  ),
                     ]),
                     dbc.Col([
                         # creates the dig dnds fig plot
-                        # dcc.Graph(id='dig-dnds-fig-coding-region-graph', figure={}),
-                        dcc.Graph(id='dig-dnds-fig-graph', figure={}),
+                        dcc.Graph(id='dig-dnds-fig-graph', 
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                  ),
                     ])
                 ])
             ], 
@@ -329,19 +301,6 @@ def gen_dig_report_app_component():
         ],
 
         callback_output=[
-            # Output('final_container', 'children')
-            # INSERT THE REMAINING POSSIBLE GRAPHS REQUIRED FOR MAKING ALL THE OTHER REPORT TYPES FOR THE DIG APP COMPONENT 
-            # Output('dig-report-coding-table', 'data'),
-            # Output('dig-report-type-label', 'children'),
-            # Output('dig-qq-graph', 'figure'),
-            # Output('dig-report-coding-table', 'columns'),
-            # Output('dig-mutation-dropdown', 'value'),
-            # Output('dig-burden-dropdown', 'value'),
-            # Output('dig-p-value-dropdown', 'value'),
-            # Output('special-text-output', 'children'),
-            # Output('debugging', 'children'),
-
-# trigger id, look into this
             Output('dig-report-table', 'data'),
             Output('dig-report-type-label', 'children'),
             Output('dig-volcano-graph', 'figure'),
@@ -362,6 +321,11 @@ def gen_dig_report_app_component():
             # changing the style of the plots to hide and unhide them
             Output('dig-qq-graph', 'style'),
             Output('dig-volcano-graph', 'style'),
+
+            # changing the other plots
+            Output('dig-fig-mu-graph', 'style'),
+            Output('dig-fig-sigma-graph', 'style'),
+            Output('dig-dnds-fig-graph', 'style'),
 
             Output('special-text-output', 'children'),
             Output('debugging', 'children'),
