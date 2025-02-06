@@ -27,26 +27,13 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
+from SNVReviewers.AppComponents.DIGAppComponent_Combined import gen_dig_combined_app_component_data_internal_callback, gen_combined_dig_report_app_component, COMBINED_MUT_DROPDOWN, COMBINED_BUR_DROPDOWN, COMBINED_SCATTER_DROPDOWN
+from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_coding_region_app_component_data_internal_callback, gen_dig_coding_region_app_component, gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
 from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, combined_mutation_type, scatterpoint_type
 
-DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
+DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
                     
-COMBINED_MUT_DROPDOWN = [
-            {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
-            {'label': 'Indels', 'value': 'indels'},
-            {'label': 'SNVs', 'value': 'snvs'}
-        ]
-COMBINED_BUR_DROPDOWN = [
-            {'label': 'Total', 'value': 'total'},
-            {'label': 'Sample-wise', 'value': 'sample_wise'}
-        ]
-COMBINED_SCATTER_DROPDOWN = [
-            {'label': 'Uniform P-mid', 'value': 'uniform_p_mid'},
-            {'label': 'P-mid', 'value': 'p_mid'},
-        ]
-
 DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs"]
 DIG_DATAFRAME_IDX = 0
 DND_DATAFRAME_IDX = 1
@@ -54,11 +41,11 @@ MUTSIG_DATAFRAME_IDX = 2
 SNV_DATA_COLUMN_NAME = "snv_data"
 DIG_LABEL_IDX = 1
 
-def gen_dig_combined_app_component_data_internal_callback(
+def gen_dig_app_component_data_internal_callback(
     data: GenericData,
     idx,
     dig_label,
-    dig_type_selection, # radio item selection
+    dig_type_selection,
     mutation_type,
     burden_type,
     p_val_type,
@@ -69,111 +56,47 @@ def gen_dig_combined_app_component_data_internal_callback(
     
     """
     all_page_content = []
+
+    if dig_type_selection == 'Combined':
         
-    if mutation_type == "":
-        mutation_type = 'indels_snvs'
-        burden_type = 'total'
-        p_val_type = 'uniform_p_mid'
-
-    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
-
-    # if dig_label == "Combined":
-    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
-    dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
-
-    debugging_component = ""
-    dig_output_type = "Combined"
-    display_bounds = display_toggle_value # whether to display the bounds
-    
-    # dir_output = "./example_notebooks/data/dig_data"
-    qq_fig = go.Figure()
-    fig_mu = go.Figure()
-    fig_sigma = go.Figure()
-    dnds_fig = go.Figure()
-    volcano_fig = go.Figure()
-
-    # checks if the user wants to display the bounds on the dig report plot
-    if display_toggle_value:
-        display_bounds = 'Yes'
-
-    # defaults to not displaying lower/upper bounds on the dig report plot
-    else:
-        display_bounds = 'No'
-    
-    if display_label_value:
-        display_labels_key = 'Yes'
-    
-    else:
-        display_labels_key = 'No'
-
-    qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, 
-                                                                            burden_type, display_bounds, 
-                                                                            display_labels_key, p_val_type)
+        all_page_content = gen_dig_combined_app_component_data_internal_callback(
+            data,
+            idx,
+            dig_label,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
         
-    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
-    # volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
-
-    dig_data_columns = []
-    
-    for clm_nm in DIG_REPORT_COMBINED_COLUMN_NAMES:
-        dig_data_clm_dict = {}
-        dig_data_clm_dict["name"] = clm_nm
-        dig_data_clm_dict["id"] = clm_nm
-
-        if clm_nm == 'FDR' or "PVAL" in clm_nm:
-            # gets the column name corresponding to the mutation type and the scatterpoint type
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
-
-        dig_data_columns.append(dig_data_clm_dict)
-    
-    for column_dict in dig_data_columns:
-        # gets the dig data column name
-        column = column_dict["id"]
-
-        # skip the rank column
-        if column == 'RANK':
-            continue
-
-        format='{:.3E}'
-
-        # rounds all the values in the FDR and PVAL columns to 4 significant digits
-        if 'FDR' in column or 'PVAL' in column:
-            dig_df[column] = [format.format(value) for value in dig_df[column]]
+    elif dig_type_selection == 'Coding region':
         
-    # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
-    # REMOVE THE DEBUGGING LATER!!!   
-    dig_df = dig_df[:100]
+        all_page_content = gen_dig_coding_region_app_component_data_internal_callback(
+            data,
+            idx,
+            dig_label,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
 
-    all_page_content = [
-                dig_df.to_dict('records'),
-                dig_type_selection,
-                volcano_fig,
-                qq_fig,
-                fig_mu, 
-                fig_sigma,
-                dnds_fig,
-                dig_data_columns,
-                mutation_type,
-                burden_type,
-                p_val_type,
-                COMBINED_MUT_DROPDOWN,
-                COMBINED_BUR_DROPDOWN,
-                COMBINED_SCATTER_DROPDOWN, 
-                text_special,
-                debugging_component
-            ]
-    # all_page_content = [
-    #         dig_df.to_dict('records'),
-    #         dig_type_selection,
-    #         qq_fig,
-    #         dig_data_columns,
-    #         mutation_type,
-    #         burden_type,
-    #         p_val_type,
-    #         text_special,
-    #         debugging_component,
-    #     ]
-        
+    elif dig_type_selection == "Promoter region":
+        raise NotImplementedError
+        print("I am in the promoter region")
+
+    elif dig_type_selection == "5-prime UTRs":
+        raise NotImplementedError
+        print("I am in the 5 prime utrs region")
+
+    elif dig_type_selection == "3-prime UTRs":
+        raise NotImplementedError
+        print("I am in the 3 prime utrs region")  
+
     return all_page_content
 
 def gen_dig_app_component_data_external_callback(
@@ -190,7 +113,7 @@ def gen_dig_app_component_data_external_callback(
     """
 
     """
-    output = gen_dig_combined_app_component_data_internal_callback(
+    output = gen_dig_app_component_data_internal_callback(
                 data,
                 idx,
                 dig_label,
@@ -204,7 +127,49 @@ def gen_dig_app_component_data_external_callback(
     
     return output
 
-def gen_dig_app_combined_component_layout():
+# CREATE A NEW FUNCTION THAT HAS THE COMBINED AND CODING REGION HTML LAYOUT WITHIN THIS FUNCTION
+    # HAVE A FUNCTION FOR EACH TYPE OF DIG REPORT RESULT, I.E. A FUNCTION FOR COMBINED RESULT A 
+    # FUNCTION FOR CODING REGION RESULT
+
+# def gen_dig_app_component_layout():
+#     """
+    
+#     """
+#     # combined_layout = []
+#     # coding_region_layout = []
+#     # prime_utr3_layout = []
+#     # prime_utr5_layout = []
+#     # intron_layout = []
+
+#     # if mode == 'Combined':
+#     #     combined_layout = gen_dig_app_combined_component_layout()
+
+#     # elif mode == 'Coding region':
+#     #     combined_layout = gen_dig_app_coding_region_component_layout()
+
+#     # insert remaining modes if they work
+
+#     all_page_content = html.Div(children=[
+#                                 # radio button for selecting which type of report to display
+#                                 dbc.RadioItems(
+#                                     options=[
+#                                         {
+#                                             "label": v, 
+#                                             "value": v
+#                                         } for v in DIG_REPORT_VALUES
+#                                     ],
+#                                     value="Combined",
+#                                     id="dig-report-type-radioitems",
+#                                     )
+#                                 ], 
+#                                 # + combined_layout + coding_region_layout
+#                                 # + prime_utr3_layout + prime_utr5_layout
+#                                 # + intron_layout, 
+#                                 id="final_container")
+
+#     return all_page_content
+
+def gen_dig_app_component_layout():
     """
     
     """
@@ -213,6 +178,7 @@ def gen_dig_app_combined_component_layout():
             html.Div([
                 dbc.Label(children="Debugging Stuff!!!", id="debugging"),    
             ]),
+
 
             # Plotly Figure for the DIG Report
             html.Div([
@@ -226,7 +192,7 @@ def gen_dig_app_combined_component_layout():
                     ],
                     value="Combined",
                     id="dig-report-type-radioitems",
-                    ),
+                ),
                 dbc.Row([
                     # insert the dropdown menus as columns inside this list for dbc.Row
                     dbc.Col([
@@ -234,7 +200,7 @@ def gen_dig_app_combined_component_layout():
                         dbc.Label("Select Mutation Type"),
                         dcc.Dropdown(
                         id='dig-mutation-dropdown',
-                        options=COMBINED_MUT_DROPDOWN,
+                        options=[],
                         value='',
                         ),
                     ]),
@@ -243,7 +209,7 @@ def gen_dig_app_combined_component_layout():
                         dbc.Label("Select Burden Type"),
                         dcc.Dropdown(
                         id='dig-burden-dropdown',
-                        options=COMBINED_BUR_DROPDOWN,
+                        options=[],
                         value=''
                         ),
                     ]),
@@ -252,7 +218,7 @@ def gen_dig_app_combined_component_layout():
                         dbc.Label("P-value Type"),
                         dcc.Dropdown(
                         id='dig-p-value-dropdown',
-                        options=COMBINED_SCATTER_DROPDOWN,
+                        options=[],
                         value=''),
                     ])
                 ]),
@@ -278,9 +244,6 @@ def gen_dig_app_combined_component_layout():
                 html.Div([
                     dbc.Label(id="special-text-output", children=""),
                 ]),
-            
-                # # creates the dig QQ plot
-                # dcc.Graph(id='dig-qq-graph', figure={}),
                 # Graphs above the coding region table
                 dbc.Row([
                     dbc.Col([
@@ -315,9 +278,9 @@ def gen_dig_app_combined_component_layout():
                         id='dig-report-table',
                         columns=[
                             {"name": i,
-                                "id": i} for i in DIG_REPORT_COMBINED_COLUMN_NAMES
+                                "id": i} for i in DIG_REPORT_COLUMN_NAMES
                         ],
-                        data=pd.DataFrame(columns=DIG_REPORT_COMBINED_COLUMN_NAMES).to_dict(
+                        data=pd.DataFrame(columns=DIG_REPORT_COLUMN_NAMES).to_dict(
                             'records'),
                         editable=False,
                         filter_action="native",
@@ -340,7 +303,7 @@ def gen_dig_app_combined_component_layout():
                         ),
                     ]
                 ),
-                # Graphs below the combined table
+                # Graphs below the coding region table
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
@@ -358,21 +321,25 @@ def gen_dig_app_combined_component_layout():
                         dcc.Graph(id='dig-dnds-fig-graph', figure={}),
                     ])
                 ])
-
             ], 
         )
     ]
 
-def gen_combined_dig_report_app_component():
+def gen_dig_report_app_component():
     """
     
     """
     
     return AppComponent(
-        name='DIG Combined Component',
-        layout=gen_dig_app_combined_component_layout(),
-        new_data_callback=gen_dig_combined_app_component_data_internal_callback,
+        name='DIG Component',
+        layout=gen_dig_app_component_layout(),
+        new_data_callback=gen_dig_app_component_data_internal_callback,
         internal_callback=gen_dig_app_component_data_external_callback,
+
+        # MAYBE USE THE DROPDOWN MENUS AS INPUT AND OUTPUT (For changing which columns get accessed in the table!!)
+            # SO THAT WHEN THE DROP DOWN CHANGES 
+
+        # Need to do a conditional statement for whether to use these values for input or other report types for input
         callback_input=[
             Input('dig-report-type-label', 'children'),
             Input('dig-report-type-radioitems', 'value'), # mode value
@@ -382,7 +349,10 @@ def gen_combined_dig_report_app_component():
             Input('display-bounds-toggle-switch', 'on'),
             Input('display-labels-toggle-switch', 'on')
         ],
+
         callback_output=[
+            # Output('final_container', 'children')
+            # INSERT THE REMAINING POSSIBLE GRAPHS REQUIRED FOR MAKING ALL THE OTHER REPORT TYPES FOR THE DIG APP COMPONENT 
             # Output('dig-report-coding-table', 'data'),
             # Output('dig-report-type-label', 'children'),
             # Output('dig-qq-graph', 'figure'),
@@ -393,7 +363,6 @@ def gen_combined_dig_report_app_component():
             # Output('special-text-output', 'children'),
             # Output('debugging', 'children'),
 
-            # Need to create extra output components for the combined layout that will be empty (based on the graphs from the coding region report)
             Output('dig-report-table', 'data'),
             Output('dig-report-type-label', 'children'),
             Output('dig-volcano-graph', 'figure'),
@@ -405,6 +374,7 @@ def gen_combined_dig_report_app_component():
             Output('dig-mutation-dropdown', 'value'),
             Output('dig-burden-dropdown', 'value'),
             Output('dig-p-value-dropdown', 'value'),
+
             # returns the dropdown options
             Output('dig-mutation-dropdown', 'options'),
             Output('dig-burden-dropdown', 'options'),
