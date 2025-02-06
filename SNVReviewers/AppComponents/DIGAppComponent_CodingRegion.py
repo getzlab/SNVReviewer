@@ -73,6 +73,9 @@ def gen_dig_coding_region_app_component_data_internal_callback(
     """
     
     """
+
+    # check if mutation_type is an old dropdown menu option
+    
     if mutation_type == "":
         mutation_type = 'indels_nonsynonymous_snvs'
         burden_type = 'total'

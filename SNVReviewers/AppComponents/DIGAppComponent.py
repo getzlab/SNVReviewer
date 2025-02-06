@@ -59,6 +59,14 @@ def gen_dig_app_component_data_internal_callback(
 
     if dig_type_selection == 'Combined':
         
+        # checking if you are changing to a new report type
+        if mutation_type not in combined_mutation_type:
+            mutation_type = 'indels_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
+
+        # PUT THESE FUNCTIONS INTO A HELPER FILE AND IMPORT FOR A
         all_page_content = gen_dig_combined_app_component_data_internal_callback(
             data,
             idx,
@@ -72,7 +80,12 @@ def gen_dig_app_component_data_internal_callback(
         )
         
     elif dig_type_selection == 'Coding region':
-        
+        # checking if you are changing to a new report type
+        if mutation_type not in coding_region_mutation_type:
+            mutation_type = 'indels_nonsynonymous_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
         all_page_content = gen_dig_coding_region_app_component_data_internal_callback(
             data,
             idx,
@@ -127,47 +140,7 @@ def gen_dig_app_component_data_external_callback(
     
     return output
 
-# CREATE A NEW FUNCTION THAT HAS THE COMBINED AND CODING REGION HTML LAYOUT WITHIN THIS FUNCTION
-    # HAVE A FUNCTION FOR EACH TYPE OF DIG REPORT RESULT, I.E. A FUNCTION FOR COMBINED RESULT A 
-    # FUNCTION FOR CODING REGION RESULT
 
-# def gen_dig_app_component_layout():
-#     """
-    
-#     """
-#     # combined_layout = []
-#     # coding_region_layout = []
-#     # prime_utr3_layout = []
-#     # prime_utr5_layout = []
-#     # intron_layout = []
-
-#     # if mode == 'Combined':
-#     #     combined_layout = gen_dig_app_combined_component_layout()
-
-#     # elif mode == 'Coding region':
-#     #     combined_layout = gen_dig_app_coding_region_component_layout()
-
-#     # insert remaining modes if they work
-
-#     all_page_content = html.Div(children=[
-#                                 # radio button for selecting which type of report to display
-#                                 dbc.RadioItems(
-#                                     options=[
-#                                         {
-#                                             "label": v, 
-#                                             "value": v
-#                                         } for v in DIG_REPORT_VALUES
-#                                     ],
-#                                     value="Combined",
-#                                     id="dig-report-type-radioitems",
-#                                     )
-#                                 ], 
-#                                 # + combined_layout + coding_region_layout
-#                                 # + prime_utr3_layout + prime_utr5_layout
-#                                 # + intron_layout, 
-#                                 id="final_container")
-
-#     return all_page_content
 
 def gen_dig_app_component_layout():
     """
@@ -178,7 +151,6 @@ def gen_dig_app_component_layout():
             html.Div([
                 dbc.Label(children="Debugging Stuff!!!", id="debugging"),    
             ]),
-
 
             # Plotly Figure for the DIG Report
             html.Div([
@@ -248,12 +220,10 @@ def gen_dig_app_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig QQ plot
-                        # dcc.Graph(id='dig-qq-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-qq-graph', figure={}),
                     ]),
                     dbc.Col([
                         # creates the dig QQ plot
-                        # dcc.Graph(id='dig-volcano-coding-region-graph', figure={}),
                         dcc.Graph(id='dig-volcano-graph', figure={}),
                     ])
                 ])
@@ -334,7 +304,7 @@ def gen_dig_report_app_component():
         name='DIG Component',
         layout=gen_dig_app_component_layout(),
         new_data_callback=gen_dig_app_component_data_internal_callback,
-        internal_callback=gen_dig_app_component_data_external_callback,
+        internal_callback=gen_dig_app_component_data_internal_callback,
 
         # MAYBE USE THE DROPDOWN MENUS AS INPUT AND OUTPUT (For changing which columns get accessed in the table!!)
             # SO THAT WHEN THE DROP DOWN CHANGES 
@@ -363,6 +333,7 @@ def gen_dig_report_app_component():
             # Output('special-text-output', 'children'),
             # Output('debugging', 'children'),
 
+# trigger id, look into this
             Output('dig-report-table', 'data'),
             Output('dig-report-type-label', 'children'),
             Output('dig-volcano-graph', 'figure'),
@@ -379,6 +350,7 @@ def gen_dig_report_app_component():
             Output('dig-mutation-dropdown', 'options'),
             Output('dig-burden-dropdown', 'options'),
             Output('dig-p-value-dropdown', 'options'),
+
             Output('special-text-output', 'children'),
             Output('debugging', 'children'),
         ],

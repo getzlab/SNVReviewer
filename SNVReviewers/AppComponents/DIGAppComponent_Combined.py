@@ -54,6 +54,7 @@ MUTSIG_DATAFRAME_IDX = 2
 SNV_DATA_COLUMN_NAME = "snv_data"
 DIG_LABEL_IDX = 1
 
+# RENAME THIS TO BE COMBINED HELPER FUNCTION
 def gen_dig_combined_app_component_data_internal_callback(
     data: GenericData,
     idx,
@@ -69,7 +70,8 @@ def gen_dig_combined_app_component_data_internal_callback(
     
     """
     all_page_content = []
-        
+
+    # check if mutation_type is an old dropdown (coding region, non coding regions) menu option
     if mutation_type == "":
         mutation_type = 'indels_snvs'
         burden_type = 'total'
@@ -162,17 +164,6 @@ def gen_dig_combined_app_component_data_internal_callback(
                 text_special,
                 debugging_component
             ]
-    # all_page_content = [
-    #         dig_df.to_dict('records'),
-    #         dig_type_selection,
-    #         qq_fig,
-    #         dig_data_columns,
-    #         mutation_type,
-    #         burden_type,
-    #         p_val_type,
-    #         text_special,
-    #         debugging_component,
-    #     ]
         
     return all_page_content
 
