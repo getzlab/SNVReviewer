@@ -28,12 +28,19 @@ import pandas as pd
 import numpy as np
 
 # from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
-from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, coding_region_burden_type, combined_mutation_type, scatterpoint_type
-from SNVReviewers.AppComponents.utils import generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, scatterpoint_type
+from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, combined_mutation_type, scatterpoint_type
+from SNVReviewers.AppComponents.utils import generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type
+from SNVReviewers.AppComponents.utils import generate_dig_non_coding_plots
 
 DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "FDR", "PVAL", "OBS", 
                                          'EXP', 'MU', 'SIGMA', 'dNdS_OBS', 'dNdS_EXP', 'FLAG', 'CGC', 'PANCAN']
-                    
+
+DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
+                           "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
+
+DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", "FDR",  "OBS", 
+                                      'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
+
 CODING_REGION_MUT_DROPDOWN = [
                         {'label': 'Indels + Nonsynonymous SNVs', 'value': 'indels_nonsynonymous_snvs'},
                         {'label': 'Indels', 'value': 'indels'},
@@ -53,10 +60,6 @@ CODING_REGION_SCATTER_DROPDOWN = [
                         {'label': 'P-mid', 'value': 'p_mid'},
                     ]
 
-
-DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
-                           "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
-                    
 COMBINED_MUT_DROPDOWN = [
             {'label': 'Indels + SNVs', 'value': 'indels_snvs'},
             {'label': 'Indels', 'value': 'indels'},
@@ -80,8 +83,6 @@ DIG_LABEL_IDX = 1
 
 def gen_combined_app_component(
     data: GenericData,
-    # idx,
-    # dig_label,
     dig_type_selection, # radio item selection
     mutation_type,
     burden_type,
@@ -169,6 +170,8 @@ def gen_combined_app_component(
                 mutation_type,
                 burden_type,
                 p_val_type,
+
+                # updates the dropdown options
                 COMBINED_MUT_DROPDOWN,
                 COMBINED_BUR_DROPDOWN,
                 COMBINED_SCATTER_DROPDOWN, 
@@ -176,21 +179,17 @@ def gen_combined_app_component(
                 # changing the plot size and the visibility of the plots
                 {'width':'1200px'},
                 {'display':'none'}, # hides the volcano plot
-
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
 
                 text_special,
-                debugging_component
             ]
         
     return all_page_content
 
 def gen_coding_region_app_component(
         data: GenericData,
-        # idx,
-        # dig_label,
         dig_type_selection, # radio item selection
         mutation_type,
         burden_type,
@@ -209,18 +208,8 @@ def gen_coding_region_app_component(
     
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
-    debugging_component = ""
-    # display_bounds = display_toggle_value # whether to display the bounds
-    
+    # debugging_component = ""    
     qq_fig = go.Figure()
-
-    # # checks if the user wants to display the bounds on the dig report plot
-    # if display_toggle_value:
-    #     display_bounds = 'Yes'
-
-    # # defaults to not displaying lower/upper bounds on the dig report plot
-    # else:
-    #     display_bounds = 'No'
     
     if display_label_value:
         display_labels_key = 'Yes'
@@ -286,6 +275,8 @@ def gen_coding_region_app_component(
             mutation_type,
             burden_type,
             p_val_type,
+
+            # updates the dropdown options
             CODING_REGION_MUT_DROPDOWN,
             CODING_REGION_BUR_DROPDOWN,
             CODING_REGION_SCATTER_DROPDOWN, 
@@ -298,6 +289,105 @@ def gen_coding_region_app_component(
             {'display':'block', 'width':'350px'},  # displays the dnds plot
 
             text_special,
-            debugging_component,
+            # debugging_component,
+        ]
+    return all_page_content
+
+def gen_prime_utr3_app_component(
+    data: GenericData,
+    dig_type_selection,
+    mutation_type,
+    burden_type,
+    p_val_type,
+    display_toggle_value,
+    display_label_value
+):
+    """
+    
+    """
+    all_page_content = []
+    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type])
+    dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
+
+    # initialize the plots for the 3 prime utr report
+    qq_fig = go.Figure()
+    fig_mu = go.Figure()
+    fig_sigma = go.Figure()
+    dnds_fig = go.Figure()
+    volcano_fig = go.Figure()
+
+    if display_label_value:
+        display_labels_key = 'Yes'
+    
+    else:
+        display_labels_key = 'No'
+
+    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
+    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+    dig_data_columns = []
+    
+    for clm_nm in DIG_NON_CODING_REPORT_COLUMN_NAMES:
+        dig_data_clm_dict = {}
+        dig_data_clm_dict["name"] = clm_nm
+        dig_data_clm_dict["id"] = clm_nm
+
+        if "PVAL" in clm_nm:
+            # gets the column name corresponding to the mutation type and the scatterpoint type
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type] #+ "_" +scatterpoint_type[p_val_type]
+
+        elif 'FDR' in clm_nm:
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+        
+        elif 'LENGTH' in clm_nm:
+            dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
+
+        elif 'OBS' in clm_nm and combined_mutation_type[mutation_type] != 'MUT' and combined_mutation_type[mutation_type] != 'dNdS':
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
+
+        dig_data_columns.append(dig_data_clm_dict)
+    
+    for column_dict in dig_data_columns:
+        # gets the dig data column name
+        column = column_dict["id"]
+
+        # skip the rank column
+        if column == 'RANK':
+            continue
+
+        format='{:.3E}'
+
+        # rounds all the values in the FDR and PVAL columns to 4 significant digits
+        if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column:
+            dig_df[column] = [format.format(value) for value in dig_df[column]]
+
+    dig_df = dig_df[:100]
+
+    all_page_content =  [
+            dig_df.to_dict('records'),
+            dig_type_selection,
+            volcano_fig,
+            qq_fig,
+            fig_mu, 
+            fig_sigma,
+            dnds_fig,
+            dig_data_columns,
+            mutation_type,
+            burden_type,
+            p_val_type,
+
+            # dropdown options
+            COMBINED_MUT_DROPDOWN,
+            CODING_REGION_BUR_DROPDOWN,
+            CODING_REGION_SCATTER_DROPDOWN,
+
+            # changing the plot size and the visibility of the plots
+            {'width':'600px'},
+            {'display':'inline-block', 'width':'600px'}, # displays the volcano plot
+            {'display':'block', 'width':'600px'}, # displays the fig mu plot
+            {'display':'block', 'width':'600px'},  # displays the fig sigma plot
+            {'display':'none'},  # displays the dnds plot
+
+            text_special,
         ]
     return all_page_content

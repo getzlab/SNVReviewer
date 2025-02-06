@@ -27,10 +27,8 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component
-from SNVReviewers.AppComponents.DIGAppComponent_Combined import gen_dig_combined_app_component_data_internal_callback, gen_combined_dig_report_app_component, COMBINED_MUT_DROPDOWN, COMBINED_BUR_DROPDOWN, COMBINED_SCATTER_DROPDOWN
-from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_coding_region_app_component_data_internal_callback, gen_dig_coding_region_app_component, gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
-from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type, combined_mutation_type, scatterpoint_type
+from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_prime_utr3_app_component
+from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type
 
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
@@ -62,6 +60,7 @@ def gen_dig_app_component_data_internal_callback(
         
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
+            # default values for the combined dig report 
             mutation_type = 'indels_snvs'
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
@@ -77,8 +76,10 @@ def gen_dig_app_component_data_internal_callback(
         )
         
     elif dig_type_selection == 'Coding region':
+
         # checking if you are changing to a new report type
         if mutation_type not in coding_region_mutation_type:
+            # default values for the coding region dig report
             mutation_type = 'indels_nonsynonymous_snvs'
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
@@ -102,8 +103,23 @@ def gen_dig_app_component_data_internal_callback(
         print("I am in the 5 prime utrs region")
 
     elif dig_type_selection == "3-prime UTRs":
-        raise NotImplementedError
-        print("I am in the 3 prime utrs region")  
+
+        # checking if you are changing to a new report type
+        if mutation_type not in combined_mutation_type:
+            # default values for the 3 prime utr dig report
+            mutation_type = 'indels_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
+        all_page_content = gen_prime_utr3_app_component(
+            data,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
 
     return all_page_content
 
@@ -113,10 +129,7 @@ def gen_dig_app_component_layout():
     """
     return [
             # displays the interactive component to filter the samples displays based on their purity values
-            html.Div([
-                dbc.Label(children="Debugging Stuff!!!", id="debugging"),    
-            ]),
-
+        
             # Plotly Figure for the DIG Report
             html.Div([
                 # radio button for selecting which type of report to display
@@ -162,6 +175,8 @@ def gen_dig_app_component_layout():
                 html.Div([
                     dbc.Row([
                         dbc.Col([
+                            
+                            # MIGHT BE GETTING RID OF THIS LATER!!!
                             # makes a toggle component
                             daq.BooleanSwitch(
                             id='display-bounds-toggle-switch',
@@ -285,11 +300,6 @@ def gen_dig_report_app_component():
         layout=gen_dig_app_component_layout(),
         new_data_callback=gen_dig_app_component_data_internal_callback,
         internal_callback=gen_dig_app_component_data_internal_callback,
-
-        # MAYBE USE THE DROPDOWN MENUS AS INPUT AND OUTPUT (For changing which columns get accessed in the table!!)
-            # SO THAT WHEN THE DROP DOWN CHANGES 
-
-        # Need to do a conditional statement for whether to use these values for input or other report types for input
         callback_input=[
             Input('dig-report-type-label', 'children'),
             Input('dig-report-type-radioitems', 'value'), # mode value
@@ -318,16 +328,14 @@ def gen_dig_report_app_component():
             Output('dig-burden-dropdown', 'options'),
             Output('dig-p-value-dropdown', 'options'),
 
-            # changing the style of the plots to hide and unhide them
+            # changing the style of the plots to hide or display them and the size in which to display them
             Output('dig-qq-graph', 'style'),
             Output('dig-volcano-graph', 'style'),
-
-            # changing the other plots
             Output('dig-fig-mu-graph', 'style'),
             Output('dig-fig-sigma-graph', 'style'),
             Output('dig-dnds-fig-graph', 'style'),
 
+            # warning message
             Output('special-text-output', 'children'),
-            Output('debugging', 'children'),
         ],
     )
