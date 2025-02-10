@@ -49,8 +49,8 @@ DIG_LABEL_IDX = 1
 def gen_dig_app_component_data_internal_callback(
     data: GenericData,
     idx,
-    dig_label,
-    dig_type_selection,
+    # dig_label,
+    dig_radio_item_selection,
     mutation_type,
     burden_type,
     p_val_type,
@@ -67,7 +67,7 @@ def gen_dig_app_component_data_internal_callback(
     dig_promoter_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_PROMOTER_DATAFRAME_IDX].copy()
     dig_intron_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_INTRON_DATAFRAME_IDX].copy()
 
-    if dig_type_selection == 'Combined':
+    if dig_radio_item_selection == 'Combined':
         
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
@@ -78,7 +78,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_combined_app_component(
             dig_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -86,7 +86,7 @@ def gen_dig_app_component_data_internal_callback(
             display_label_value
         )
         
-    elif dig_type_selection == 'Coding region':
+    elif dig_radio_item_selection == 'Coding region':
 
         # checking if you are changing to a new report type
         if mutation_type not in coding_region_mutation_type:
@@ -97,7 +97,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_coding_region_app_component(
             dig_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -113,7 +113,7 @@ def gen_dig_app_component_data_internal_callback(
 
     # THEN START WORKING ON THE mutsig component and dndscv component
 
-    elif dig_type_selection == "Promoter region":
+    elif dig_radio_item_selection == "Promoter region":
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
             # default values for the 3 prime utr dig report
@@ -123,7 +123,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_promoter_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -131,7 +131,7 @@ def gen_dig_app_component_data_internal_callback(
             display_label_value
         )
 
-    elif dig_type_selection == "5-prime UTRs":
+    elif dig_radio_item_selection == "5-prime UTRs":
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
             # default values for the 3 prime utr dig report
@@ -141,7 +141,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_prime5_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -149,7 +149,7 @@ def gen_dig_app_component_data_internal_callback(
             display_label_value
         )
 
-    elif dig_type_selection == "3-prime UTRs":
+    elif dig_radio_item_selection == "3-prime UTRs":
 
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
@@ -160,7 +160,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_prime3_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -168,7 +168,7 @@ def gen_dig_app_component_data_internal_callback(
             display_label_value
         )
 
-    elif dig_type_selection == 'Introns':
+    elif dig_radio_item_selection == 'Introns':
         # checking if you are changing to a new report type
         if mutation_type not in combined_mutation_type:
             # default values for the 3 prime utr dig report
@@ -178,7 +178,7 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_intron_df,
-            dig_type_selection, 
+            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -285,14 +285,14 @@ def gen_dig_app_component_layout():
 
             html.Div(
                 [
-                    # displays the type of dig report you want displayed
-                    dbc.Row([
-                        html.Div(
-                            [
-                                dbc.Label("Dig Report Table: "),
-                                html.Label(children="Combined", id="dig-report-type-label"), # initialize label to empty string
-                            ])
-                        ]),                
+                    # # displays the type of dig report you want displayed
+                    # dbc.Row([
+                    #     html.Div(
+                    #         [
+                    #             dbc.Label("Dig Report Table: "),
+                    #             html.Label(children="Combined", id="dig-report-type-label"), # initialize label to empty string
+                    #         ])
+                    #     ]),                
                     
                 # displays a table for the dig report
                 html.Div(
@@ -366,7 +366,7 @@ def gen_dig_report_app_component():
         new_data_callback=gen_dig_app_component_data_internal_callback,
         internal_callback=gen_dig_app_component_data_internal_callback,
         callback_input=[
-            Input('dig-report-type-label', 'children'),
+            # Input('dig-report-type-label', 'children'),
             Input('dig-report-type-radioitems', 'value'), # mode value
             Input('dig-mutation-dropdown', 'value'),
             Input('dig-burden-dropdown', 'value'),
@@ -377,7 +377,7 @@ def gen_dig_report_app_component():
 
         callback_output=[
             Output('dig-report-table', 'data'),
-            Output('dig-report-type-label', 'children'),
+            # Output('dig-report-type-label', 'children'),
             Output('dig-volcano-graph', 'figure'),
             Output('dig-qq-graph', 'figure'),
             Output('dig-fig-mu-graph', 'figure'),

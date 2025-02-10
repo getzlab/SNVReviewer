@@ -85,7 +85,7 @@ DIG_LABEL_IDX = 1
 
 def gen_combined_app_component(
     dig_df,
-    dig_type_selection, # radio item selection
+    # dig_type_selection, # radio item selection
     mutation_type,
     burden_type,
     p_val_type,
@@ -160,7 +160,7 @@ def gen_combined_app_component(
 
     all_page_content = [
                 dig_df.to_dict('records'),
-                dig_type_selection,
+                # dig_type_selection,
                 volcano_fig,
                 qq_fig,
                 fig_mu, 
@@ -190,7 +190,7 @@ def gen_combined_app_component(
 
 def gen_coding_region_app_component(
         dig_df,
-        dig_type_selection, # radio item selection
+        # dig_type_selection, # radio item selection
         mutation_type,
         burden_type,
         p_val_type,
@@ -264,7 +264,7 @@ def gen_coding_region_app_component(
 
     all_page_content = [
             dig_df.to_dict('records'),
-            dig_type_selection,
+            # dig_type_selection,
             volcano_fig,
             qq_fig,
             fig_mu, 
@@ -293,7 +293,7 @@ def gen_coding_region_app_component(
 
 def gen_non_coding_app_component(
     dig_df,
-    dig_type_selection,
+    # dig_type_selection,
     mutation_type,
     burden_type,
     p_val_type,
@@ -378,7 +378,7 @@ def gen_non_coding_app_component(
     all_page_content =  [
             dig_df.to_dict('records'),
             # df_kept.to_dict('records'),
-            dig_type_selection,
+            # dig_type_selection,
             volcano_fig,
             qq_fig,
             fig_mu, 

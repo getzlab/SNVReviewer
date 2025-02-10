@@ -21,6 +21,7 @@ import numpy as np
 
 DNDSCV_REPORT_VALUES = ["Results", "Comparison", "Summary"]
 NUM_GENE_LABELS = ["All", "First 30", "First 20", "First 10", "None"]
+DNDSCV_REPORT_COLUMN_NAMES = ["GENE", "N_SYN", "N_MIS"] # finish the rest of the column name
 
 def gen_dNdScv_app_component_data_callback(
     data: GenericData,
@@ -32,7 +33,9 @@ def gen_dNdScv_app_component_data_callback(
 
     figure1 = go.Figure()
     all_page_content = [
-        figure1
+        figure1,
+        dnd_radio_item_selection,
+        NUM_GENE_LABELS
     ]
 
     return all_page_content
@@ -61,51 +64,15 @@ def gen_dNdScv_app_component_layout():
                     # insert the dropdown menus as columns inside this list for dbc.Row
                     dbc.Col([
                         # dropdown for selecting number of significant gene labels to display
-                        dbc.Label("Select Number of Significant Gene Labels to Display"),
+                        dbc.Label("Select Number of Significant Gene Labels to Display:"),
                         dcc.Dropdown(
                         id='dnd-gene-dropdown',
                         options=[],
                         value='',
                         ),
                     ]),
-                    # dbc.Col([
-                    #     # dropdown for selecting burden type
-                    #     dbc.Label("Select Burden Type"),
-                    #     dcc.Dropdown(
-                    #     id='dnd-burden-dropdown',
-                    #     options=[],
-                    #     value=''
-                    #     ),
-                    # ]),
-                    # dbc.Col([
-                    #     # dropdown for selecting burden type
-                    #     dbc.Label("P-value Type"),
-                    #     dcc.Dropdown(
-                    #     id='dnd-p-value-dropdown',
-                    #     options=[],
-                    #     value=''),
-                    # ])
+                    
                 ]),
-                html.Div([
-                    dbc.Row([
-                        dbc.Col([
-                            
-                            # makes a toggle component
-                            daq.BooleanSwitch(
-                            id='dnd-display-bounds-toggle-switch',
-                            label='Display Bounds',
-                            on=False),
-                        ]),
-                        dbc.Col([
-                            # makes a toggle component
-                            daq.BooleanSwitch(
-                            id='dnd-display-labels-toggle-switch',
-                            label='Display Labels',
-                            on=False),
-                        ])
-                    ])
-                ]),
-
                 html.Div([
                     dbc.Label(id="dnd-special-text-output", children=""),
                 ]),
@@ -120,39 +87,39 @@ def gen_dNdScv_app_component_layout():
                                   style={"width":"1200px"} # increases the size of the plot
                                 ), 
                     ]),
-                    # can hide the plots depending on the report
-                    dbc.Col([
-                        # creates the dig QQ plot
-                        dcc.Graph(id='dnd-volcano-graph', 
-                                  figure={},
-                                  style={"display":"none"} # hides the plot
-                                  ),
-                    ])
+                    # # can hide the plots depending on the report
+                    # dbc.Col([
+                    #     # creates the dig QQ plot
+                    #     dcc.Graph(id='dnd-volcano-graph', 
+                    #               figure={},
+                    #               style={"display":"none"} # hides the plot
+                    #               ),
+                    # ])
                 ])
             ]),
 
             html.Div(
                 [
-                    # displays the type of dig report you want displayed
-                    dbc.Row([
-                        html.Div(
-                            [
-                                dbc.Label("dndSCV Report Table: "),
-                                html.Label(children="Combined", id="dnd-report-type-label"), # initialize label to empty string
-                            ])
-                        ]),                
+                    # # displays the type of dig report you want displayed
+                    # dbc.Row([
+                    #     html.Div(
+                    #         [
+                    #             dbc.Label("dndSCV Report Table: "),
+                    #             html.Label(children="Results", id="dnd-report-type-label"), # initialize label to empty string
+                    #         ])
+                    #     ]),                
                     
                 # displays a table for the dig report
                 html.Div(
                     children=[
-                        html.H2('DIG Table'),
+                        html.H2('DND SCV Table'),
                         dash_table.DataTable(
                         id='dnd-report-table',
                         columns=[
                             {"name": i,
-                                "id": i} for i in DIG_REPORT_COLUMN_NAMES
+                                "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
                         ],
-                        data=pd.DataFrame(columns=DIG_REPORT_COLUMN_NAMES).to_dict(
+                        data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
                             'records'),
                         editable=False,
                         filter_action="native",
@@ -179,21 +146,21 @@ def gen_dNdScv_app_component_layout():
                 dbc.Row([
                     dbc.Col([
                         # creates the dig fig mu plot
-                        dcc.Graph(id='dnd-mu-graph', 
+                        dcc.Graph(id='dnd-mutation-ratio-graph', 
                                   figure={},
-                                  style={"display":"none"} # hides the plot
+                                #   style={"display":"none"} # hides the plot
                                   ),
                     ]),
                     dbc.Col([
                         # creates the dig fig sigma plot
-                        dcc.Graph(id='dnd-sigma-graph', 
+                        dcc.Graph(id='dnd-missense-graph', 
                                   figure={},
-                                  style={"display":"none"} # hides the plot
+                                #   style={"display":"none"} # hides the plot
                                   ),
                     ]),
                     dbc.Col([
                         # creates the dig dnds fig plot
-                        dcc.Graph(id='dnd-fig-graph', 
+                        dcc.Graph(id='dnd-truncating-graph', 
                                   figure={},
                                 #   style={"display":"none"} # hides the plot
                                   ),
@@ -203,8 +170,7 @@ def gen_dNdScv_app_component_layout():
         )
     ]
 
-
-def gen_custom_app_component():
+def gen_dnd_scv_app_component():
     
     return AppComponent(
         name='dNdScv Component',
@@ -215,6 +181,8 @@ def gen_custom_app_component():
             Input('dnd-report-type-radioitems', 'value')
         ],
         callback_output=[
-            Output('dnd-fig-graph', 'figure'),
+            Output('dnd-qq-graph', 'figure'),
+            Output('dnd-special-text-output', 'children'),
+            Output('dnd-gene-dropdown', 'options')
         ],
     )
