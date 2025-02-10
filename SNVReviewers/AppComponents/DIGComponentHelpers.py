@@ -38,7 +38,9 @@ DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "FDR
 DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
 
-DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", "FDR",  "OBS", 
+DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", 
+                                    #   "FDR",  # Figure out why this column is not being displayed!!
+                                      "OBS", 
                                       'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
 
 CODING_REGION_MUT_DROPDOWN = [
@@ -82,7 +84,7 @@ SNV_DATA_COLUMN_NAME = "snv_data"
 DIG_LABEL_IDX = 1
 
 def gen_combined_app_component(
-    data: GenericData,
+    dig_df,
     dig_type_selection, # radio item selection
     mutation_type,
     burden_type,
@@ -94,14 +96,11 @@ def gen_combined_app_component(
     
     """
     all_page_content = []
-    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
-
-    # if dig_label == "Combined":
+    # dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dig_df = dig_df.copy()
     dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
-    debugging_component = ""
-    # dig_output_type = "Combined"
     display_bounds = display_toggle_value # whether to display the bounds
     
     qq_fig = go.Figure()
@@ -135,6 +134,7 @@ def gen_combined_app_component(
         dig_data_clm_dict["id"] = clm_nm
 
         if clm_nm == 'FDR' or "PVAL" in clm_nm:
+
             # gets the column name corresponding to the mutation type and the scatterpoint type
             dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
 
@@ -182,14 +182,14 @@ def gen_combined_app_component(
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
-
+                # Warning text message (only generated if you get a specific mutation and burden type combination on dropdown menu)
                 text_special,
             ]
         
     return all_page_content
 
 def gen_coding_region_app_component(
-        data: GenericData,
+        dig_df,
         dig_type_selection, # radio item selection
         mutation_type,
         burden_type,
@@ -201,11 +201,10 @@ def gen_coding_region_app_component(
     
     """
     all_page_content = []
-    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
-
+    # dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dig_df = dig_df.copy()
     # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
     dig_df = dig_df.sort_values(by='PVAL'+ "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]) #+ "_" + scatterpoint_type[p_val_type])
-    
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
     # debugging_component = ""    
@@ -289,12 +288,11 @@ def gen_coding_region_app_component(
             {'display':'block', 'width':'350px'},  # displays the dnds plot
 
             text_special,
-            # debugging_component,
         ]
     return all_page_content
 
-def gen_prime_utr3_app_component(
-    data: GenericData,
+def gen_non_coding_app_component(
+    dig_df,
     dig_type_selection,
     mutation_type,
     burden_type,
@@ -306,11 +304,13 @@ def gen_prime_utr3_app_component(
     
     """
     all_page_content = []
-    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    # CHANGE THE INPUT, SO INSTEAD OF data, MAKE INPUT dig_df
+    dig_df = dig_df.copy()
+    # dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
     dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type])
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
-    # initialize the plots for the 3 prime utr report
+    # initialize the plots for the 3 prime str report
     qq_fig = go.Figure()
     fig_mu = go.Figure()
     fig_sigma = go.Figure()
@@ -323,8 +323,8 @@ def gen_prime_utr3_app_component(
     else:
         display_labels_key = 'No'
 
-    # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
     df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+    # df_kept = df_kept.copy()
     dig_data_columns = []
     
     for clm_nm in DIG_NON_CODING_REPORT_COLUMN_NAMES:
@@ -334,10 +334,16 @@ def gen_prime_utr3_app_component(
 
         if "PVAL" in clm_nm:
             # gets the column name corresponding to the mutation type and the scatterpoint type
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type] #+ "_" +scatterpoint_type[p_val_type]
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]
 
-        elif 'FDR' in clm_nm:
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+        elif 'EXP' in clm_nm:
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
+
+        elif 'SIZE' in clm_nm:
+            dig_data_clm_dict['id'] = 'ELT_SIZE'
+
+        # elif 'FDR' in clm_nm:
+        #     dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
         
         elif 'LENGTH' in clm_nm:
             dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
@@ -367,9 +373,11 @@ def gen_prime_utr3_app_component(
     # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!! 
     dig_df = dig_df[:100]
+    # dig_kept = dig_kept[:100]
 
     all_page_content =  [
             dig_df.to_dict('records'),
+            # df_kept.to_dict('records'),
             dig_type_selection,
             volcano_fig,
             qq_fig,

@@ -16,10 +16,7 @@ def gen_mutsig_app_component_data_callback(
 
 def gen_mutsig_app_component_layout():
     
-    # table
-    #
     return html.Div(id='custom-component')
-
 
 def gen_custom_app_component():
     

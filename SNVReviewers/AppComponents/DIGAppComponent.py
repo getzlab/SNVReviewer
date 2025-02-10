@@ -27,16 +27,22 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_prime_utr3_app_component
+from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_non_coding_app_component
 from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type
 
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
                     
-DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs"]
-DIG_DATAFRAME_IDX = 0
-DND_DATAFRAME_IDX = 1
-MUTSIG_DATAFRAME_IDX = 2
+DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs", "Introns"]
+# Dig Dataframe 
+DIG_COMBINED_DATAFRAME_IDX = 0
+DIG_PRIME3_DATAFRAME_IDX = 1
+DIG_PRIME5_DATAFRAME_IDX = 2
+DIG_PROMOTER_DATAFRAME_IDX = 3
+DIG_INTRON_DATAFRAME_IDX = 4
+
+DND_DATAFRAME_IDX = -2
+MUTSIG_DATAFRAME_IDX = -1
 SNV_DATA_COLUMN_NAME = "snv_data"
 DIG_LABEL_IDX = 1
 
@@ -55,6 +61,11 @@ def gen_dig_app_component_data_internal_callback(
     
     """
     all_page_content = []
+    dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_COMBINED_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
+    dig_prime3_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_PRIME3_DATAFRAME_IDX].copy()
+    dig_prime5_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_PRIME5_DATAFRAME_IDX].copy()
+    dig_promoter_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_PROMOTER_DATAFRAME_IDX].copy()
+    dig_intron_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_INTRON_DATAFRAME_IDX].copy()
 
     if dig_type_selection == 'Combined':
         
@@ -66,7 +77,7 @@ def gen_dig_app_component_data_internal_callback(
             p_val_type = 'uniform_p_mid'
 
         all_page_content = gen_combined_app_component(
-            data,
+            dig_df,
             dig_type_selection, 
             mutation_type,
             burden_type,
@@ -85,7 +96,7 @@ def gen_dig_app_component_data_internal_callback(
             p_val_type = 'uniform_p_mid'
 
         all_page_content = gen_coding_region_app_component(
-            data,
+            dig_df,
             dig_type_selection, 
             mutation_type,
             burden_type,
@@ -103,12 +114,40 @@ def gen_dig_app_component_data_internal_callback(
     # THEN START WORKING ON THE mutsig component and dndscv component
 
     elif dig_type_selection == "Promoter region":
-        raise NotImplementedError
-        print("I am in the promoter region")
+        # checking if you are changing to a new report type
+        if mutation_type not in combined_mutation_type:
+            # default values for the 3 prime utr dig report
+            mutation_type = 'indels_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
+        all_page_content = gen_non_coding_app_component(
+            dig_promoter_df,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
 
     elif dig_type_selection == "5-prime UTRs":
-        raise NotImplementedError
-        print("I am in the 5 prime utrs region")
+        # checking if you are changing to a new report type
+        if mutation_type not in combined_mutation_type:
+            # default values for the 3 prime utr dig report
+            mutation_type = 'indels_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
+        all_page_content = gen_non_coding_app_component(
+            dig_prime5_df,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
 
     elif dig_type_selection == "3-prime UTRs":
 
@@ -119,8 +158,26 @@ def gen_dig_app_component_data_internal_callback(
             burden_type = 'total'
             p_val_type = 'uniform_p_mid'
 
-        all_page_content = gen_prime_utr3_app_component(
-            data,
+        all_page_content = gen_non_coding_app_component(
+            dig_prime3_df,
+            dig_type_selection, 
+            mutation_type,
+            burden_type,
+            p_val_type,
+            display_toggle_value,
+            display_label_value
+        )
+
+    elif dig_type_selection == 'Introns':
+        # checking if you are changing to a new report type
+        if mutation_type not in combined_mutation_type:
+            # default values for the 3 prime utr dig report
+            mutation_type = 'indels_snvs'
+            burden_type = 'total'
+            p_val_type = 'uniform_p_mid'
+
+        all_page_content = gen_non_coding_app_component(
+            dig_intron_df,
             dig_type_selection, 
             mutation_type,
             burden_type,

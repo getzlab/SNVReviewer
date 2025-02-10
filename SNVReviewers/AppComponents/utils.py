@@ -1351,7 +1351,7 @@ def generate_coding_region_report(
     return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special
 
 # 3 prime utr report results
-def generate_dig_3_prime_utr_report(
+def generate_dig_non_coding_region_dataframe(
                                 path_to_dig_results, 
                                     ):
     # Driver gene lists
