@@ -28,9 +28,9 @@ import pandas as pd
 import numpy as np
 
 # from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
-from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, combined_mutation_type, scatterpoint_type
+from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, combined_mutation_type, combined_burden_plot_type, scatterpoint_type
 from SNVReviewers.AppComponents.utils import generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type
-from SNVReviewers.AppComponents.utils import generate_dig_non_coding_plots
+from SNVReviewers.AppComponents.utils import generate_dig_non_coding_plots, non_coding_region_burden_type
 
 DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "FDR", "PVAL", "OBS", 
                                          'EXP', 'MU', 'SIGMA', 'dNdS_OBS', 'dNdS_EXP', 'FLAG', 'CGC', 'PANCAN']
@@ -95,6 +95,7 @@ def gen_combined_app_component(
     """
     
     """
+    debugging= ""
     all_page_content = []
     # dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
     dig_df = dig_df.copy()
@@ -184,6 +185,7 @@ def gen_combined_app_component(
                 {'display':'none'}, # hides the volcano plot
                 # Warning text message (only generated if you get a specific mutation and burden type combination on dropdown menu)
                 text_special,
+                debugging
             ]
         
     return all_page_content
@@ -200,6 +202,7 @@ def gen_coding_region_app_component(
     """
     
     """
+    debugging=""
     all_page_content = []
     # dig_df = data.df[SNV_DATA_COLUMN_NAME][0][DIG_DATAFRAME_IDX].copy() # gets the dig report data for a specific cohort
     dig_df = dig_df.copy()
@@ -288,6 +291,7 @@ def gen_coding_region_app_component(
             {'display':'block', 'width':'350px'},  # displays the dnds plot
 
             text_special,
+            debugging
         ]
     return all_page_content
 
@@ -303,6 +307,7 @@ def gen_non_coding_app_component(
     """
     
     """
+    debugging=""
     all_page_content = []
     # CHANGE THE INPUT, SO INSTEAD OF data, MAKE INPUT dig_df
     dig_df = dig_df.copy()
@@ -325,6 +330,17 @@ def gen_non_coding_app_component(
 
     df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
     # df_kept = df_kept.copy()
+    columns_to_keep = [column_name for column_name in df_kept if 'FDR' in column_name or 'GENE' in column_name]
+
+    # gets the relevant FDR and GENE column
+    df_new = df_kept[columns_to_keep].copy()
+    merged_dig_df = dig_df.merge(df_new, on='GENE', how='outer', suffixes=('_left', '_right')) 
+
+    for clm in merged_dig_df:
+
+        if 'FDR' in clm:
+            debugging = debugging + f"_{clm}"
+
     dig_data_columns = []
     
     for clm_nm in DIG_NON_CODING_REPORT_COLUMN_NAMES:
@@ -334,7 +350,7 @@ def gen_non_coding_app_component(
 
         if "PVAL" in clm_nm:
             # gets the column name corresponding to the mutation type and the scatterpoint type
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]
+            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type]
 
         elif 'EXP' in clm_nm:
             dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
@@ -342,14 +358,20 @@ def gen_non_coding_app_component(
         elif 'SIZE' in clm_nm:
             dig_data_clm_dict['id'] = 'ELT_SIZE'
 
+        # elif 'FDR' in clm_nm and non_coding_region_burden_type[burden_type]:
+        #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type] + "_" + scatterpoint_type[p_val_type]
+        
         # elif 'FDR' in clm_nm:
-        #     dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+        #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
         
         elif 'LENGTH' in clm_nm:
             dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
 
         elif 'OBS' in clm_nm and combined_mutation_type[mutation_type] != 'MUT' and combined_mutation_type[mutation_type] != 'dNdS':
             dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
+
+        elif 'OBS' in clm_nm and mutation_type == 'indels_snvs':
+            dig_data_clm_dict["id"] = clm_nm + "_SAMPLES"    
 
         dig_data_columns.append(dig_data_clm_dict)
     
@@ -365,20 +387,18 @@ def gen_non_coding_app_component(
 
         # rounds all the values in the FDR and PVAL columns to 4 significant digits
         if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column:
-            dig_df[column] = [format.format(value) for value in dig_df[column]]
-
-    # get the coding region working plots working!!
-    # get the display bounds selection tool working 
+            merged_dig_df[column] = [format.format(value) for value in merged_dig_df[column]]
 
     # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!! 
-    dig_df = dig_df[:100]
+    # dig_df = dig_df[:100]
+    merged_dig_df = merged_dig_df[:100]
     # dig_kept = dig_kept[:100]
 
     all_page_content =  [
-            dig_df.to_dict('records'),
+            # dig_df.to_dict('records'),
             # df_kept.to_dict('records'),
-            # dig_type_selection,
+            merged_dig_df.to_dict('records'),
             volcano_fig,
             qq_fig,
             fig_mu, 
@@ -402,5 +422,6 @@ def gen_non_coding_app_component(
             {'display':'none'},  # displays the dnds plot
 
             text_special,
+            debugging
         ]
     return all_page_content

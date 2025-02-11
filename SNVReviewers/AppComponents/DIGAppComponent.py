@@ -28,7 +28,7 @@ import pandas as pd
 import numpy as np
 
 from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_non_coding_app_component
-from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type
+from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type, non_coding_region_burden_type
 
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
@@ -193,6 +193,7 @@ def gen_dig_app_component_layout():
     
     """
     return [
+            html.Div(id='debugging-dig', children=''),
             # displays the interactive component to filter the samples displays based on their purity values
         
             # Plotly Figure for the DIG Report
@@ -402,5 +403,6 @@ def gen_dig_report_app_component():
 
             # warning message
             Output('special-text-output', 'children'),
+            Output('debugging-dig', 'children')
         ],
     )

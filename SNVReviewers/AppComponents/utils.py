@@ -141,6 +141,13 @@ scatterpoint_type = {
     "p_mid": "recalc"
 }
 
+
+# dictionaries for coding region the two dropdowns
+non_coding_region_burden_type = {
+    'total': 'BURDEN',
+    'sample_wise': 'SAMPLE',
+}
+
 def nb_pvalue_greater_midp(k, alpha, p):
     """ Calculate an UPPER TAIL p-value for a negative binomial distribution with a midp correction
     """
@@ -1432,7 +1439,7 @@ def generate_dig_non_coding_region_dataframe(
 
     return df
 
-def generate_3_prime_utr_plot_data(df, mut, bur, display_bounds, scatterpoint, alp=0.1):
+def generate_non_coding_region_plot_data(df, mut, bur, display_bounds, scatterpoint, alp=0.1):
     """
     Given a mutation type and a burden type, generate the data for the volcano plot, Q-Q plot, and table plot
     :param mut: str, mutation type
@@ -1568,13 +1575,13 @@ def generate_dig_non_coding_plots(df, mut_key, bur_key, display_bounds_key, scat
     # prepare plot data for all combinations of mut_type and burden_type dropdown options
     plot_data = {}
     mut_val = combined_mutation_type[mut_key]
-    bur_val = coding_region_burden_type[bur_key]
+    bur_val = non_coding_region_burden_type[bur_key]
     display_bounds_val = display_bounds_type[display_bounds_key] 
     scatterpoint_val = scatterpoint_type[scatterpoint_key]
     text_special = ""
    
     if not (mut_key in ['indels', 'indels_snvs', 'mutations'] and bur_key == 'sample_wise'):
-        df_kept, pvals, pval_bounds, logfc, logq, logq_bounds, labels, ind_kept, table_fig = generate_3_prime_utr_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
+        df_kept, pvals, pval_bounds, logfc, logq, logq_bounds, labels, ind_kept, table_fig = generate_non_coding_region_plot_data(df, mut_val, bur_val, display_bounds_val, scatterpoint_val)
 
         # Volcano Plot
 
@@ -1890,26 +1897,3 @@ def generate_dig_non_coding_plots(df, mut_key, bur_key, display_bounds_key, scat
         template='plotly_white')
 
     return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special
-
-
-    # # save static figures as HTML divs
-    # fig_mu_html = fig_mu.to_html(full_html=False, include_plotlyjs='cdn')
-    # fig_sigma_html = fig_sigma.to_html(full_html=False, include_plotlyjs='cdn')
-
-    # # combine everything into the final HTML
-    # html_content = html_content.format(
-    #     name_interval_set=name_interval_set.replace("_", " ").title(),
-    #     mut_options=mut_options,
-    #     burden_options=burden_options,
-    #     display_bounds_options=display_bounds_options,
-    #     scatterpoint_options=scatterpoint_options,
-    #     plot_data=plot_data_json,
-    #     fig_mu_html=fig_mu_html,
-    #     fig_sigma_html=fig_sigma_html
-    # )
-
-    # # save to an HTML file
-    # name = '_'.join(name_interval_set.split(' ')).lower()
-    # with open(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + f'dig_report_{name}.html',
-    #           'w') as f:
-    #     f.write(html_content)
