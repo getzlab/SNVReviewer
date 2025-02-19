@@ -34,7 +34,7 @@ DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_p
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
                     
 DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs", "Introns"]
-# Dig Dataframe 
+# Different DIG Dataframes
 DIG_COMBINED_DATAFRAME_IDX = 0
 DIG_PRIME3_DATAFRAME_IDX = 1
 DIG_PRIME5_DATAFRAME_IDX = 2
@@ -190,7 +190,20 @@ def gen_dig_app_component_data_internal_callback(
 
 def gen_dig_app_component_layout():
     """
-    
+    Generates the html layout for the DIG app component displaying the combined, coding region, 
+    promoter, intron, 3 prime utr, and 5 prime utr DIG reports
+
+    Parameters
+    ==========
+        None
+
+    Return
+    ======
+        dash.html
+            a plotly dash layout with a radio item for switching between the different report types, three dropdown menus corresponding
+            to which mutation type/burden type/p value type you want to see displayed in the graphs and table, graphs for qq plot/volcano
+            plot/fig mu plot/fig sigma plot/dnds fig plot, and warning text that displays if a specific combination of mutation and burden
+            type are selected in the dropdown menu
     """
     return [
             html.Div(id='debugging-dig', children=''),
@@ -358,7 +371,12 @@ def gen_dig_app_component_layout():
 
 def gen_dig_report_app_component():
     """
+    Generates an AppComponent defining the interactive elements for viewing DIG reports
     
+    Returns
+    =======
+    AnnoMate.AppComponent
+        AppComponent defining the interactive elements for viewing DIG reports
     """
     
     return AppComponent(

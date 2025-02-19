@@ -15,13 +15,17 @@ import plotly.graph_objects as go
 from AnnoMate.Data import Data, DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component
+from SNVReviewers.AppComponents.DIGAppComponent import DND_DATAFRAME_IDX, SNV_DATA_COLUMN_NAME
 
 import pandas as pd
 import numpy as np
 
 DNDSCV_REPORT_VALUES = ["Results", "Comparison", "Summary"]
-NUM_GENE_LABELS = ["All", "First 30", "First 20", "First 10", "None"]
-DNDSCV_REPORT_COLUMN_NAMES = ["GENE", "N_SYN", "N_MIS"] # finish the rest of the column name
+
+DNDSCV_REPORT_COLUMN_NAMES = ["RANK", "GENE", "N_SYN", "N_MIS", "N_NON", "N_SPL", "N_IND",
+                              "dNdS_MIS", "dNdS_NON", "dNdS_SPL", "dNdS_IND", "PVAL_MIS",
+                              "PVAL_TRUNC", "PVAL_IND", "PVAL", "FDR", "CGC", "PANCAN"]
 
 def gen_dNdScv_app_component_data_callback(
     data: GenericData,
@@ -30,13 +34,23 @@ def gen_dNdScv_app_component_data_callback(
 
 ):
     all_page_content = []
-
+    dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX]
+    num_gene_values = 'All'
     figure1 = go.Figure()
-    all_page_content = [
-        figure1,
-        dnd_radio_item_selection,
-        NUM_GENE_LABELS
-    ]
+
+    if dnd_radio_item_selection == "Results":
+        all_page_content = gen_dndscv_results_app_component(
+                dnd_df,
+                num_gene_values,
+                dnd_radio_item_selection
+    )
+    
+    # elif dnd_radio_item_selection == "Comparison":
+        # all_page_content = [
+        #     figure1,
+        #     dnd_radio_item_selection,
+        #     COMPARISON_DROPDOWN_VALUES,
+        # ]
 
     return all_page_content
 
@@ -44,9 +58,7 @@ def gen_dNdScv_app_component_layout():
     
     # table
     #
-    return [
-            # displays the interactive component to filter the samples displays based on their purity values
-        
+    return [        
             # Plotly Figure for the DIG Report
             html.Div([
                 # radio button for selecting which type of report to display
@@ -58,7 +70,7 @@ def gen_dNdScv_app_component_layout():
                         } for v in DNDSCV_REPORT_VALUES
                     ],
                     value="Results",
-                    id="dnd-report-type-radioitems",
+                    id="dnds-report-type-radioitems",
                 ),
                 dbc.Row([
                     # insert the dropdown menus as columns inside this list for dbc.Row
@@ -66,15 +78,17 @@ def gen_dNdScv_app_component_layout():
                         # dropdown for selecting number of significant gene labels to display
                         dbc.Label("Select Number of Significant Gene Labels to Display:"),
                         dcc.Dropdown(
-                        id='dnd-gene-dropdown',
+                        id='dnds-gene-dropdown',
                         options=[],
                         value='',
                         ),
                     ]),
                     
                 ]),
+
+                # REMOVE LATER!!!
                 html.Div([
-                    dbc.Label(id="dnd-special-text-output", children=""),
+                    dbc.Label(id="dnds-special-text-output", children=""),
                 ]),
                 # Graphs above the coding region table
                 dbc.Row([
@@ -82,7 +96,7 @@ def gen_dNdScv_app_component_layout():
                     
                     dbc.Col([
                         # creates the dig QQ plot
-                        dcc.Graph(id='dnd-qq-graph', 
+                        dcc.Graph(id='dnds-qq-graph', 
                                   figure={},
                                   style={"width":"1200px"} # increases the size of the plot
                                 ), 
@@ -112,9 +126,9 @@ def gen_dNdScv_app_component_layout():
                 # displays a table for the dig report
                 html.Div(
                     children=[
-                        html.H2('DND SCV Table'),
+                        html.H2('dNdScv Table'),
                         dash_table.DataTable(
-                        id='dnd-report-table',
+                        id='dnds-report-table',
                         columns=[
                             {"name": i,
                                 "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
@@ -145,24 +159,24 @@ def gen_dNdScv_app_component_layout():
                 # Graphs below the coding region table
                 dbc.Row([
                     dbc.Col([
-                        # creates the dig fig mu plot
-                        dcc.Graph(id='dnd-mutation-ratio-graph', 
+                        # creates the dNdS ratio across all mutations plot
+                        dcc.Graph(id='dnds-mutation-ratio-graph', 
                                   figure={},
-                                #   style={"display":"none"} # hides the plot
+                                  style={'display':'block', 'width':'600px'},
                                   ),
                     ]),
                     dbc.Col([
-                        # creates the dig fig sigma plot
-                        dcc.Graph(id='dnd-missense-graph', 
+                        # creates the dNdS ratio of missense mutation plot
+                        dcc.Graph(id='dnds-missense-graph', 
                                   figure={},
-                                #   style={"display":"none"} # hides the plot
+                                  style={'display':'block', 'width':'600px'},
                                   ),
                     ]),
                     dbc.Col([
-                        # creates the dig dnds fig plot
-                        dcc.Graph(id='dnd-truncating-graph', 
+                        # creates the dnds ratio of truncating mutations plot
+                        dcc.Graph(id='dnds-truncating-graph', 
                                   figure={},
-                                #   style={"display":"none"} # hides the plot
+                                  style={'display':'block', 'width':'600px'}, 
                                   ),
                     ])
                 ])
@@ -178,11 +192,11 @@ def gen_dnd_scv_app_component():
         new_data_callback=gen_dNdScv_app_component_data_callback,
         internal_callback=gen_dNdScv_app_component_data_callback,
         callback_input=[
-            Input('dnd-report-type-radioitems', 'value')
+            Input('dnds-report-type-radioitems', 'value')
         ],
         callback_output=[
-            Output('dnd-qq-graph', 'figure'),
-            Output('dnd-special-text-output', 'children'),
-            Output('dnd-gene-dropdown', 'options')
+            Output('dnds-qq-graph', 'figure'),
+            Output('dnds-special-text-output', 'children'),
+            Output('dnds-gene-dropdown', 'options')
         ],
     )
