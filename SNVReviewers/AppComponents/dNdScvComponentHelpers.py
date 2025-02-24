@@ -35,8 +35,8 @@ RESULTS_DROPDOWN_OPTIONS = [
     {'label': 'None', 'value': 'None'}
 ]
 COMPARISON_DROPDOWN_OPTIONS = [
-    {'label': "MutSig2 vs dNdScv", 'value':"MutSig2 vs dNdScv"}, 
-    {'label': "MutSig2 vs DIG", 'value':"MutSig2 vs DIG"}, 
+    {'label': "MutSig2 vs dNdScv", 'value':'MutSig2CV vs dNdScv'}, 
+    {'label': "MutSig2 vs DIG", 'value':"MutSig2CV vs DIG"}, 
     {'label': "dNdScv vs DIG", 'value':"dNdScv vs DIG"}
 ]
 SUMMARY_DROPDOWN_OPTIONS = [
@@ -53,7 +53,15 @@ QQ_PLOT_RESULT_STYLE = {"width":"1200px"}
 DNDS_GLOBAL_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_MIS_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_TRUNC_RESULT_STYLE = {'display':'block', 'width':'600px'}
+DNDS_COMPARISON_STYLE = {"width":"1200px"}
 HIDE_PLOTS_STYLE = {"display":"none"}
+
+HIDE_TABLE_STYLE = {"display":"none"}
+SHOW_TABLE_STYLE = {
+                    'width': '100%',  # Make the table width responsive
+                    'maxWidth': '100%',  # Ensure it doesn’t go beyond the screen width
+                    'overflowX': 'auto',  # Allow horizontal scroll if necessary
+                    }
 
 DNDS_RESULTS_DROPDOWM_LABEL = 'Select Number of Significant Gene Labels to Display:'
 DNDS_COMPARISON_DROPDOWM_LABEL = 'Tools to compare:'
@@ -81,6 +89,8 @@ def gen_dndscv_results_app_component(
     dnd_df_plot = dnd_df_plot.copy()
     dnd_df_merged = dnd_df_merged.copy()
     dnd_df_global = dnd_df_global.copy()
+    table = pd.DataFrame().to_dict('records')
+    # table3 = pd.DataFrame().to_dict('records')
 
 
     for clm in dnd_df_plot:
@@ -91,19 +101,32 @@ def gen_dndscv_results_app_component(
 
     # NEED TO REFORMAT THE dnd_df_plot dataframe for 2 point decimal precision
     all_page_content = [
-        
             dnd_df_plot.to_dict('records'),
+            table,
+            table,
+            table,
+            table, 
+
             # dndscv report figures
             qq_fig,
             fig_dnds_global,
             fig_dnds_mis,
-            fig_dnds_tru, 
+            fig_dnds_tru,
+            go.Figure(), # do not display comparison plot
 
             # dndscv report figure style
             QQ_PLOT_RESULT_STYLE,
             DNDS_GLOBAL_RESULT_STYLE,
             DNDS_MIS_RESULT_STYLE,
             DNDS_TRUNC_RESULT_STYLE, 
+            HIDE_PLOTS_STYLE,
+
+            # dndscv report table style
+            SHOW_TABLE_STYLE,
+            HIDE_TABLE_STYLE,
+            HIDE_TABLE_STYLE,
+            HIDE_TABLE_STYLE,
+            HIDE_TABLE_STYLE,
             
             dnd_radio_item_selection,
             RESULTS_DROPDOWN_OPTIONS,
@@ -133,18 +156,37 @@ def gen_dndscv_comparison_app_component(
     figure2 = go.Figure()
     figure3 = go.Figure()
     figure4 = go.Figure()
+    comparison_fig = go.Figure()
+    table1 = pd.DataFrame().to_dict('records')
+    table2 = pd.DataFrame().to_dict('records')
+    table3 = pd.DataFrame().to_dict('records')
+    table4 = pd.DataFrame().to_dict('records')
+    table5 = pd.DataFrame().to_dict('records')
 
     all_page_content = [
-        dnd_df_plot.to_dict('records'),
+        table1,
+        table2,
+        table3,
+        table4,
+        table5,
+
         figure1,
         figure2, 
         figure3,
         figure4,
-
+        comparison_fig,
+        
         HIDE_PLOTS_STYLE, 
         HIDE_PLOTS_STYLE,
         HIDE_PLOTS_STYLE,
         HIDE_PLOTS_STYLE,
+        DNDS_COMPARISON_STYLE,
+
+        HIDE_TABLE_STYLE,
+        SHOW_TABLE_STYLE,
+        SHOW_TABLE_STYLE,
+        SHOW_TABLE_STYLE,
+        HIDE_TABLE_STYLE,
 
         dnd_radio_item_selection,
         COMPARISON_DROPDOWN_OPTIONS,
@@ -170,18 +212,39 @@ def gen_dndscv_summary_app_component(
     figure2 = go.Figure()
     figure3 = go.Figure()
     figure4 = go.Figure()
+    figure5 = go.Figure()
+    summary_table1 = dnd_df_plot.to_dict('records')
+    table2 = pd.DataFrame().to_dict('records')
+    table3 = pd.DataFrame().to_dict('records')
+    table4 = pd.DataFrame().to_dict('records')
+    table5 = dnd_df_merged.to_dict('records'),
 
     all_page_content = [
-        dnd_df_plot.to_dict('records'),
+        # tables to display for the summary dNdScv report
+        summary_table1,
+        table2,
+        table3,
+        table4,
+        table5,
+
+        # no figures to display for the summary dNdScv report
         figure1,
         figure2, 
         figure3,
         figure4,
+        figure5,
 
         HIDE_PLOTS_STYLE,
         HIDE_PLOTS_STYLE,
         HIDE_PLOTS_STYLE,
         HIDE_PLOTS_STYLE,
+        HIDE_PLOTS_STYLE,
+
+        SHOW_TABLE_STYLE,
+        HIDE_TABLE_STYLE,
+        HIDE_TABLE_STYLE,
+        HIDE_TABLE_STYLE,
+        SHOW_TABLE_STYLE,
 
         dnd_radio_item_selection,
         SUMMARY_DROPDOWN_OPTIONS,

@@ -2564,7 +2564,6 @@ methods = {
     'MutSig2CV vs DIG': ['MutSig2CV', 'DIG'],
     'dNdScv vs DIG': ['dNdScv', 'DIG']
 }
-
 #
 # UTILITY FUNCTIONS
 
@@ -2666,8 +2665,8 @@ def preprocess_results(
         path_mutsig,
         path_dndscv,
         path_dig,
-        path_cgc,
-        path_pancan,
+        # path_cgc,
+        # path_pancan,
         alp=0.1
 ):
     """
@@ -2738,6 +2737,12 @@ def preprocess_results(
     df = df.sort_values('FDR_min').reset_index().rename(columns={'index': 'GENE'})
     df['RANK'] = df.index + 1
     df = df[['RANK', 'GENE', 'CHROM', 'SIZE_coding', 'FDR_MutSig2CV', 'FDR_dNdScv', 'FDR_DIG', 'FDR_min', 'SIG_MutSig2CV', 'SIG_dNdScv', 'SIG_DIG']]
+    
+
+    path_cgc = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
+    path_pancan = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
+    # path_cgc = ''
+    # path_pancan = ''
     # add indicators of CGC and PanCanAtlas membership
     cgc_list = pd.read_csv(path_cgc, sep='\t').to_numpy().flatten()
     pancan_list = pd.read_csv(path_pancan, sep='\t').to_numpy().flatten()
@@ -2745,7 +2750,6 @@ def preprocess_results(
     df['PANCAN'] = df.GENE.isin(pancan_list).copy()
 
     return df
-
 #
 # PLOTLY FIGURE/TABLE GENERATING FUNCTIONS
 
