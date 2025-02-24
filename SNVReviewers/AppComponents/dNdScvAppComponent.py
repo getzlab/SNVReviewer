@@ -15,8 +15,10 @@ import plotly.graph_objects as go
 from AnnoMate.Data import Data, DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component
-from SNVReviewers.AppComponents.DIGAppComponent import DND_DATAFRAME_IDX, SNV_DATA_COLUMN_NAME
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
+from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX
+from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_VALUES, COMPARISON_DROPDOWN_VALUES, SUMMARY_DROPDOWN_VALUES
 
 import pandas as pd
 import numpy as np
@@ -31,26 +33,56 @@ def gen_dNdScv_app_component_data_callback(
     data: GenericData,
     idx,
     dnd_radio_item_selection,
+    dnds_dropdown_value,
 
 ):
     all_page_content = []
-    dnd_df = data.df[SNV_DATA_COLUMN_NAME][0][DND_DATAFRAME_IDX]
-    num_gene_values = 'All'
-    figure1 = go.Figure()
+    dnd_df_plot = data.df[SNV_DATA_COLUMN_NAME][0][DND_PLOT_DATAFRAME_IDX]
+    dnd_df_merged = data.df[SNV_DATA_COLUMN_NAME][0][DND_MERGED_DATAFRAME_IDX]
+    dnd_df_global = data.df[SNV_DATA_COLUMN_NAME][0][DND_GLOBAL_DATAFRAME_IDX]
+    # num_gene_key = 'All'
+    # figure1 = go.Figure()
+    if dnds_dropdown_value is None:
+        dnds_dropdown_value = 'All'
 
     if dnd_radio_item_selection == "Results":
+
+        if dnds_dropdown_value is not RESULTS_DROPDOWN_VALUES:
+            dnds_dropdown_value = 'All'
+
         all_page_content = gen_dndscv_results_app_component(
-                dnd_df,
-                num_gene_values,
+                dnd_df_plot,
+                dnd_df_merged,
+                dnd_df_global,
+                dnds_dropdown_value,
                 dnd_radio_item_selection
-    )
+        )
     
-    # elif dnd_radio_item_selection == "Comparison":
-        # all_page_content = [
-        #     figure1,
-        #     dnd_radio_item_selection,
-        #     COMPARISON_DROPDOWN_VALUES,
-        # ]
+    elif dnd_radio_item_selection == "Comparison":
+
+        if dnds_dropdown_value is not COMPARISON_DROPDOWN_VALUES:
+            dnds_dropdown_value = "MutSig2 vs dNdScv"
+
+        all_page_content = gen_dndscv_comparison_app_component(
+                dnd_df_plot,
+                dnd_df_merged,
+                dnd_df_global,
+                dnds_dropdown_value,
+                dnd_radio_item_selection
+        )
+        
+    elif dnd_radio_item_selection == "Summary":
+
+        if dnds_dropdown_value is not SUMMARY_DROPDOWN_VALUES:
+            dnds_dropdown_value = "MutSig2, dNdScv, and DIG"
+
+        all_page_content = gen_dndscv_summary_app_component(
+                dnd_df_plot,
+                dnd_df_merged,
+                dnd_df_global,
+                dnds_dropdown_value,
+                dnd_radio_item_selection
+        )
 
     return all_page_content
 
@@ -58,7 +90,12 @@ def gen_dNdScv_app_component_layout():
     
     # table
     #
-    return [        
+    return [   
+            # REMOVE LATER!!!
+            html.Div([
+                dbc.Label(id="dnds-debugging", children=""),
+            ]),
+
             # Plotly Figure for the DIG Report
             html.Div([
                 # radio button for selecting which type of report to display
@@ -76,7 +113,10 @@ def gen_dNdScv_app_component_layout():
                     # insert the dropdown menus as columns inside this list for dbc.Row
                     dbc.Col([
                         # dropdown for selecting number of significant gene labels to display
-                        dbc.Label("Select Number of Significant Gene Labels to Display:"),
+                        html.Div([
+                            dbc.Label(id="dnds-dropdowm-label", children=""),
+                        ]),
+                        # dbc.Label('dnds-dropdowm-label', children=""),
                         dcc.Dropdown(
                         id='dnds-gene-dropdown',
                         options=[],
@@ -192,11 +232,26 @@ def gen_dnd_scv_app_component():
         new_data_callback=gen_dNdScv_app_component_data_callback,
         internal_callback=gen_dNdScv_app_component_data_callback,
         callback_input=[
-            Input('dnds-report-type-radioitems', 'value')
+            Input('dnds-report-type-radioitems', 'value'),
+            Input('dnds-gene-dropdown', 'value')
         ],
         callback_output=[
+            # dNdScv figures
             Output('dnds-qq-graph', 'figure'),
+            Output('dnds-mutation-ratio-graph', 'figure'),
+            Output('dnds-missense-graph', 'figure'),
+            Output('dnds-truncating-graph', 'figure'),
+
+            # dNdScv display
+            Output('dnds-qq-graph', 'style'),
+            Output('dnds-mutation-ratio-graph', 'style'),
+            Output('dnds-missense-graph', 'style'),
+            Output('dnds-truncating-graph', 'style'),
+
             Output('dnds-special-text-output', 'children'),
-            Output('dnds-gene-dropdown', 'options')
+            Output('dnds-gene-dropdown', 'options'),
+            Output('dnds-dropdowm-label', 'children'),
+
+            Output('dnds-debugging', 'children'),
         ],
     )
