@@ -2237,6 +2237,7 @@ def generate_dnds_report(
 
     # prepare plot data for all dropdown options
     plot_data = {}
+    print("checking ngenes_key: ", ngenes_key)
     ngenes_val = ngenes[ngenes_key]
     # for ngenes_key, ngenes_val in ngenes.items():
 
@@ -2314,7 +2315,9 @@ def generate_dnds_report(
     y_capped = y[ind_capped]
     labels_capped = get_capped_labels(x_capped, y_capped, labels[ind_capped])
 
-    if ngenes_val is not None:
+    # if ngenes_val is not None:
+    if ngenes_val != 'none':
+        print("ngenes_val: ", ngenes_val)
         if ngenes_val == 'all':
             x_annot = [x_capped, x[ind_ncapped_hits]]
             y_annot = [[pval_max] * sum(ind_capped), y[ind_ncapped_hits]]
@@ -2501,3 +2504,1037 @@ def generate_dnds_report(
     
     return qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot
     # NEED TO RETURN ALL THE dNdS plots!!!
+
+
+
+# CODE FOR COMPARISON dNdScv report
+import argparse
+import json
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from statsmodels.stats.multitest import fdrcorrection
+import scipy as sp
+from itertools import chain, combinations
+
+#
+# PARAMETERS
+
+# Scatter Plot
+
+# figure size
+fig_size = (800, 700)
+# fontsize
+fs = 14
+# padding for plot range
+xy_pad = 0.05
+# tick step size
+tick_step = 2
+# vertical gap between the annotation labels
+ay_gap = 15
+# colors
+color_both = 'green'
+color_only1 = 'magenta'
+color_only2 = 'red'
+color_neither = 'black'
+# opacity
+opacity=0.6
+
+# Table Plot
+
+headerColor = 'grey'
+rowEvenColor = 'lightgrey'
+rowOddColor = 'white'
+lineColor = 'darkslategray'
+
+# Static Table Plot
+# minimum number of rows (genes) to display in the table
+n_rows_min = 50
+# buffer for the number of rows in the table
+n_rows_buffer = 0.5
+
+# minimum threshold at which we cap all FDRs
+FDR_limit = 1e-16
+
+log10FDR_limit = -np.log10(FDR_limit)
+
+# dropdown options: methods to display results for
+methods = {
+    'MutSig2CV vs dNdScv': ['MutSig2CV', 'dNdScv'],
+    'MutSig2CV vs DIG': ['MutSig2CV', 'DIG'],
+    'dNdScv vs DIG': ['dNdScv', 'DIG']
+}
+
+#
+# UTILITY FUNCTIONS
+
+def reformat_numbers(x, format='{:.2E}'):
+    """
+    Reformat numbers in an array to a specific format
+    """
+    return [format.format(n) for n in x]
+
+def format_cols(df):
+    """
+    Format columns in a DataFrame for better readability.
+
+    This function reformats numerical columns containing 'PVAL' or 'FDR' in their names,
+    converts 'RANK' and 'SIZE_coding' columns to integer strings, and replaces NaN values
+    with 'NA' in all columns.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame to be formatted.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The formatted DataFrame with numerical columns reformatted, integer columns converted
+        to strings, and NaN values replaced with 'NA'.
+    """
+    # formatting data in columns
+    for col in [c for c in df.columns if 'PVAL' in c or 'FDR' in c]:
+        df[col] = reformat_numbers(df[col].to_numpy())
+    for c in ['RANK', 'CHROM', 'SIZE_coding']:
+        is_nan = df[c].isna()
+        v = np.zeros(df.shape[0], dtype='object')
+        v[~is_nan] = df[c][~is_nan].astype(int).astype(str)
+        v[is_nan] = 'NA'
+        df[c] = v
+    df = df.astype(str)
+    for c in df.columns:
+        df.loc[df[c].str.lower().isin(['nan', 'na']), c] = 'NA'
+    return df
+
+def find_overlapping_points(X, Y):
+    """
+    Identify overlapping points (points with identical x and y coordinates) in a dataset.
+
+    Parameters:
+    -----------
+    X : array-like
+        A 1D array of x-coordinates of the points.
+    Y : array-like
+        A 1D array of y-coordinates of the points.
+
+    Returns:
+    --------
+    pts_olap : numpy.ndarray
+        A 1D array of unique indices corresponding to points that overlap (i.e., have matching x and y coordinates).
+    eq : list of numpy.ndarray
+        A list of arrays, where each array contains the indices of a group of points that overlap.
+        Each group represents a unique set of overlapping points.
+
+    Notes:
+    ------
+    - The function compares every pair of points to check if their x and y coordinates match.
+    - Groups of overlapping points are determined and stored such that no group is a subset of another.
+    - If there are no overlapping points, `eq` will be an empty list, and `pts_olap` will be an empty array.
+
+    Example:
+    --------
+    >>> X = [1, 2, 3, 1]
+    >>> Y = [4, 5, 6, 4]
+    >>> pts_olap, eq = find_overlapping_points(X, Y)
+    >>> print(pts_olap)
+    [0, 3]
+    >>> print(eq)
+    [array([0, 3])]
+    """
+    # matrix of booleans indicating whether two points (both their x and y coordinates) match
+    ind_eq = np.logical_and(np.reshape(X, (-1, 1)) - X == 0, np.reshape(Y, (-1, 1)) - Y == 0)
+    # collect all groups of matching points
+    eq = []
+    for i in range(len(X)):
+        # indices of group of matching points
+        eqi = set((np.where(ind_eq[i, i:])[0] + i).tolist())
+        if len(eqi) > 1:  # check if there are at least two matching points
+            # check whether the group of points are a subset of a previously stored larger group; if not, keep it
+            addit = True
+            for eqj in eq:
+                if len(eqi - eqj) == 0:
+                    addit = False
+                    break
+            if addit:
+                eq.append(eqi)
+    # indices of all points that overlap
+    pts_olap = np.unique([item for sublist in eq for item in sublist])
+    return pts_olap, [np.array(list(e)) for e in eq]
+
+def preprocess_results(
+        path_mutsig,
+        path_dndscv,
+        path_dig,
+        path_cgc,
+        path_pancan,
+        alp=0.1
+):
+    """
+    Preprocess and combine results from multiple statistical methods to identify significant genes.
+
+    This function loads and formats output files from MutSig2CV, dNdScv, and DIG methods, combines their results,
+    and identifies significant genes based on a specified significance threshold (alpha). It also adds indicators
+    for Cancer Gene Census (CGC) and PanCanAtlas membership.
+
+    Parameters
+    ----------
+    path_mutsig : str
+        Path to the MutSig2CV output file (sig_genes.txt).
+    path_dndscv : str
+        Path to the dNdScv output file (dnds_out.tsv).
+    path_dig : str
+        Path to the DIG output file (combined.dig.results.txt).
+    path_cgc : str
+        Path to the Cancer Gene Census (CGC) reference file (cancer_gene_census.tsv).
+    path_pancan : str
+        Path to the PanCanAtlas genes reference file (pancanatlas_genes.tsv).
+    alp : float, optional
+        Significance threshold for the FDR values (default is 0.1).
+
+    Returns
+    -------
+    pandas.DataFrame
+        A DataFrame containing combined and processed results with the following columns:
+        - 'RANK': Rank of the gene based on combined p-value.
+        - 'GENE': Gene identifier.
+        - 'SIZE_coding': Coding region size.
+        - 'FDR_MutSig2CV': FDR from MutSig2CV.
+        - 'FDR_dNdScv': FDR from dNdScv.
+        - 'FDR_DIG': FDR from DIG.
+        - 'FDR_min': Minimum value of FDR out of the three tests.
+        - 'SIG_MutSig2CV': Significance indicator for MutSig2CV.
+        - 'SIG_dNdScv': Significance indicator for dNdScv.
+        - 'SIG_DIG': Significance indicator for DIG.
+        - 'CGC': Indicator for CGC membership.
+        - 'PANCAN': Indicator for PanCanAtlas membership.
+    """
+    # load MutSig2CV output
+    df_mutsig = pd.read_csv(path_mutsig, sep='\t', low_memory=False).set_index('gene')
+    df_mutsig = df_mutsig.rename(columns={'q': 'FDR_MutSig2CV', 'p': 'PVAL_MutSig2CV', 'codelen': 'SIZE_MutSig2CV'})[
+        ['SIZE_MutSig2CV', 'PVAL_MutSig2CV', 'FDR_MutSig2CV']]
+    # load dNdScv output
+    df_dndscv = pd.read_csv(path_dndscv, sep='\t').set_index('gene_name')
+    df_dndscv = df_dndscv.rename(columns={'qglobal_cv': 'FDR_dNdScv', 'pglobal_cv': 'PVAL_dNdScv'})[
+        ['PVAL_dNdScv', 'FDR_dNdScv']]
+    # load DIG output
+    df_dig = pd.read_csv(path_dig, sep='\t', low_memory=False).set_index('GENE')
+    df_dig = df_dig.rename(columns={'SIZE_coding': 'SIZE_DIG', 'PVAL_coding_MUT_recalc': 'PVAL_DIG'})[
+        ['CHROM', 'SIZE_DIG', 'PVAL_DIG']]
+    df_dig['FDR_DIG'] = fdrcorrection(df_dig['PVAL_DIG'].astype(float))[1]
+    df_dig['SIZE_DIG'] = df_dig['SIZE_DIG'].astype(int)
+    # add coding region sizes
+    df = pd.concat([df_mutsig, df_dndscv, df_dig], axis=1)
+    df['SIZE_coding'] = df['SIZE_MutSig2CV'].copy()
+    is_nan = df['SIZE_coding'].isna().copy()
+    df.loc[is_nan, 'SIZE_coding'] = df['SIZE_DIG'][is_nan].copy()
+    # combine p-values
+    cols_pval = [c for c in df.columns if 'PVAL' in c]
+    for col in cols_pval:
+        method = col.split('_')[-1]
+        is_nan = df[f'FDR_{method}'].isna()
+        df.loc[~is_nan, f'SIG_{method}'] = df.loc[~is_nan, f'FDR_{method}'] < alp
+    df['FDR_min'] = df[['FDR_MutSig2CV', 'FDR_dNdScv', 'FDR_DIG']].min(axis=1)
+    df = df.sort_values('FDR_min').reset_index().rename(columns={'index': 'GENE'})
+    df['RANK'] = df.index + 1
+    df = df[['RANK', 'GENE', 'CHROM', 'SIZE_coding', 'FDR_MutSig2CV', 'FDR_dNdScv', 'FDR_DIG', 'FDR_min', 'SIG_MutSig2CV', 'SIG_dNdScv', 'SIG_DIG']]
+    # add indicators of CGC and PanCanAtlas membership
+    cgc_list = pd.read_csv(path_cgc, sep='\t').to_numpy().flatten()
+    pancan_list = pd.read_csv(path_pancan, sep='\t').to_numpy().flatten()
+    df['CGC'] = df.GENE.isin(cgc_list).copy()
+    df['PANCAN'] = df.GENE.isin(pancan_list).copy()
+
+    return df
+
+#
+# PLOTLY FIGURE/TABLE GENERATING FUNCTIONS
+
+def plot_fdr_comparison(df, method1, method2, alp):
+    """
+    Generate a scatter plot using Plotly to compare -log10(FDR) values between two statistical methods.
+
+    This function categorizes genes into four significance groups:
+    1. Significant in both methods.
+    2. Significant in only the first method.
+    3. Significant in only the second method.
+    4. Not significant in either method.
+
+    Overlapping points are identified and annotated, FDR values are capped at a predefined threshold,
+    and plot features such as identity lines and significance thresholds are highlighted.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input DataFrame containing FDR values for the two methods. The DataFrame must include:
+        - 'FDR_{method1}' and 'FDR_{method2}': Columns with FDR values for each method.
+        - 'GENE': Column with gene identifiers.
+
+    method1 : str
+        Name of the first method used for FDR calculation. This is used for column references and axis labels.
+
+    method2 : str
+        Name of the second method used for FDR calculation. This is used for column references and axis labels.
+
+    alp : float
+        Significance threshold for the FDR values. Genes with FDR values below this threshold are considered significant.
+
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        1. fig : plotly.graph_objects.Figure
+            The generated scatter plot figure.
+        2. sig_genes_dict : dict
+            A dictionary with keys representing three significance categories:
+            - `'{method1} and {method2}'`: Genes significant in both methods.
+            - `'{method1} only'`: Genes significant only in the first method.
+            - `'{method2} only'`: Genes significant only in the second method.
+            Each key contains a NumPy array of gene identifiers.
+
+    Notes
+    -----
+    - The FDR values are transformed to -log10(FDR) for visualization.
+    - FDR values exceeding a predefined threshold are capped for scale consistency.
+    - Overlapping points are grouped and annotated to minimize plot clutter.
+
+    Example
+    -------
+    >>> result = plot_fdr_comparison(df, method1='Method_A', method2='Method_B', alp=0.1)
+    >>> print(result[1]['Method_A and Method_B'])
+    ['Gene1', 'Gene2', 'Gene3']
+    """
+
+    log10alp = -np.log10(alp)
+
+    #
+    # ASSEMBLE DATA FRAME
+
+    # assemble data frame that will be plotted
+    df_plot = df[['GENE']].copy()
+    # original values
+    df_plot[f"{method1}: -log10(FDR)"] = -np.log10(df[f'FDR_{method1}'])
+    df_plot[f"{method2}: -log10(FDR)"] = -np.log10(df[f'FDR_{method2}'])
+    # capped values
+    df_plot[f"{method1}: -log10(FDR) capped"] = df_plot[f"{method1}: -log10(FDR)"].copy()
+    df_plot[f"{method2}: -log10(FDR) capped"] = df_plot[f"{method2}: -log10(FDR)"].copy()
+    df_plot.loc[
+        df_plot[f"{method1}: -log10(FDR) capped"] > log10FDR_limit, f"{method1}: -log10(FDR) capped"] = log10FDR_limit
+    df_plot.loc[
+        df_plot[f"{method2}: -log10(FDR) capped"] > log10FDR_limit, f"{method2}: -log10(FDR) capped"] = log10FDR_limit
+    # annotate genes based on their significance with either of the two methods
+    df_plot.loc[np.logical_and(df_plot[f"{method1}: -log10(FDR)"] >= log10alp,
+                               df_plot[f"{method2}: -log10(FDR)"] >= log10alp), 'Significant'] = 'both'
+    df_plot.loc[np.logical_and(df_plot[f"{method1}: -log10(FDR)"] >= log10alp,
+                               df_plot[f"{method2}: -log10(FDR)"] < log10alp), 'Significant'] = f'{method1} only'
+    df_plot.loc[np.logical_and(df_plot[f"{method1}: -log10(FDR)"] < log10alp,
+                               df_plot[f"{method2}: -log10(FDR)"] >= log10alp), 'Significant'] = f'{method2} only'
+    df_plot.loc[np.logical_and(df_plot[f"{method1}: -log10(FDR)"] < log10alp,
+                               df_plot[f"{method2}: -log10(FDR)"] < log10alp), 'Significant'] = 'neither'
+
+    #
+    # PRE-PROCESS DATA
+
+    # displayed range
+    xy_max = max([df_plot[f"{method1}: -log10(FDR) capped"].max(), df_plot[f"{method2}: -log10(FDR) capped"].max()]) * (
+                1 + xy_pad)
+
+    #
+    # ASSEMBLE PLOTLY FIGURE
+
+    fig = go.Figure()
+    # plot "identity" line
+    fig.add_trace(go.Scatter(x=[0, xy_max], y=[0, xy_max], showlegend=False, hoverinfo='skip', mode='lines',
+                             line=dict(color='gray', dash='dash')))
+    # plot lines that indicate significance thresholds
+    fig.add_trace(go.Scatter(x=[0, xy_max], y=[log10alp] * 2, showlegend=False, hoverinfo='skip', mode='lines',
+                             line=dict(color='gray', dash='solid')))
+    fig.add_trace(go.Scatter(x=[log10alp] * 2, y=[0, xy_max], showlegend=False, hoverinfo='skip', mode='lines',
+                             line=dict(color='gray', dash='solid')))
+    # plot lines that indicate FDR caps
+    fig.add_trace(go.Scatter(x=[0, xy_max], y=[log10FDR_limit] * 2, showlegend=False, hoverinfo='skip', mode='lines',
+                             line=dict(color='gray', dash='dash')))
+    fig.add_trace(go.Scatter(x=[log10FDR_limit] * 2, y=[0, xy_max], showlegend=False, hoverinfo='skip', mode='lines',
+                             line=dict(color='gray', dash='dash')))
+    # plot scatter points for the 4 groups of genes
+    for name_i, color_i in zip(['both', 'neither', f'{method1} only', f'{method2} only'],
+                               [color_both, color_neither, color_only1, color_only2]):
+        ind_i = df_plot.Significant == name_i
+        X = df_plot.loc[ind_i, f"{method1}: -log10(FDR) capped"].to_numpy()
+        Y = df_plot.loc[ind_i, f"{method2}: -log10(FDR) capped"].to_numpy()
+        labels = df_plot.loc[df_plot.Significant == name_i, "GENE"].tolist()
+        if name_i != 'neither':
+            hoverinfo = 'name+text'
+            # redefining hoverinfo
+            X_lab = df_plot.loc[ind_i, f"{method1}: -log10(FDR)"].tolist()
+            Y_lab = df_plot.loc[ind_i, f"{method2}: -log10(FDR)"].tolist()
+            labels = [(f"({X_lab[i]:.2f}, {Y_lab[i]:.2f})<br>{l}") for i, l in enumerate(labels)]
+            # find groups of points that overlap
+            pts_overlap, pt_groups = find_overlapping_points(X, Y)
+            pts_nooverlap = np.setdiff1d(np.arange(len(X)), pts_overlap)
+            # updating hoverinfo for groups of points that overlap
+            for ptg in pt_groups:
+                newlab = '<br>'.join(np.array(labels)[ptg].tolist())
+                for i in ptg:
+                    labels[i] = newlab
+        else:
+            hoverinfo = 'all'
+        # plot scatter points
+        fig.add_trace(go.Scatter(
+            x=X.tolist(),
+            y=Y.tolist(),
+            text=labels,
+            mode='markers',
+            name=name_i,
+            marker=dict(color=color_i, opacity=opacity),
+            hoverinfo=hoverinfo,
+            xhoverformat='.2f',
+            yhoverformat='.2f'
+        ))
+        # add annotations
+        if name_i != 'neither':
+            # plot annotations for non-overlapping points
+            for i in pts_nooverlap:
+                fig.add_annotation(
+                    x=X[i],
+                    y=Y[i],
+                    text=labels[i].split('<br>')[-1],
+                    showarrow=True,
+                    ax=10,
+                    ay=7.5,
+                    font=dict(color=color_i),
+                    textangle=0,
+                    xanchor="left",
+                    yanchor="middle"
+                )
+            # plot annotations for overlapping points
+            for ptg in pt_groups:
+                ay_start = -ay_gap * (ptg.shape[0] - 1) / 2
+                for j, i in enumerate(ptg):
+                    fig.add_annotation(
+                        x=X[i],
+                        y=Y[i],
+                        text=labels[i].split('<br>')[2 * j + 1],
+                        showarrow=True,
+                        ax=10,
+                        ay=ay_start + j * ay_gap,
+                        font=dict(color=color_i),
+                        textangle=0,
+                        xanchor="left",
+                        yanchor="middle"
+                    )
+    # format axes and style
+    fig.update_layout(
+        width=fig_size[0],
+        height=fig_size[1],
+        title=dict(
+            text='{} vs. {}'.format(method1, method2),
+            x=0.5,
+            xanchor='center'
+        ),
+        font=dict(size=fs),
+        legend=dict(
+            title="Gene significant for:",
+            x=1.15,  # Move the legend further to the right
+            xanchor='left'
+        ),
+        template='plotly_white',
+        xaxis=dict(title=f'{method1}: -log10(FDR)', range=[0, xy_max], dtick=tick_step, scaleanchor='y'),
+        # Link the scales of x and y
+        yaxis=dict(title=f'{method2}: -log10(FDR)', range=[0, xy_max], dtick=tick_step)
+    )
+    # collect significant gene names for the three categories with such genes
+    sig_genes_dict = {}
+    sig_genes_dict[f'{method1} and {method2}'] = df_plot.loc[df_plot.Significant == 'both', 'GENE'].to_numpy()
+    is_nan = df_plot.Significant.isna()
+    ind_method1 = np.logical_and(is_nan, df_plot[f'{method1}: -log10(FDR)'] >= log10alp)
+    sig_genes_dict[f'{method1} only'] = df_plot.loc[
+                                            df_plot.Significant == f'{method1} only', 'GENE'].to_numpy().tolist() + \
+                                        df_plot.loc[ind_method1, 'GENE'].to_numpy().tolist()
+    ind_method2 = np.logical_and(is_nan, df_plot[f'{method2}: -log10(FDR)'] >= log10alp)
+    sig_genes_dict[f'{method2} only'] = df_plot.loc[
+                                            df_plot.Significant == f'{method2} only', 'GENE'].to_numpy().tolist() + \
+                                        df_plot.loc[ind_method2, 'GENE'].to_numpy().tolist()
+    return fig, sig_genes_dict
+
+
+def plot_table_comparison(df, sig_genes_dict):
+    """
+    Generates and displays formatted Plotly tables to visualize significant genes
+    based on different methods.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Input DataFrame containing gene-related information. Expected columns include:
+        - 'GENE': Gene names.
+        - 'RANK': Ranking of genes.
+        - 'SIZE_coding': Coding region size.
+        - Significance metrics such as 'PVAL', 'FDR', and method-specific columns prefixed with 'SIG_'.
+
+    sig_genes_dict : dict
+        Dictionary mapping methods or conditions (e.g., "Method A only") to lists of
+        significant genes identified under those methods.
+
+    Workflow
+    --------
+    For each key in `sig_genes_dict`:
+    1. Filter `df` to include only rows corresponding to genes in the associated list.
+    2. Sort the filtered DataFrame by the 'RANK' column.
+    3. Annotate genes untested by other methods with an asterisk (*) if applicable.
+    4. Format numeric columns (e.g., P-values, FDR) for readability.
+    5. Replace missing or invalid values (e.g., 'nan') with 'NA'.
+    6. Create a Plotly `Table` figure:
+       - Include bold headers.
+       - Apply alternating row colors for better readability.
+       - Align the first column ('GENE') to the left; center-align all other columns.
+    7. Add a title to indicate the current method and include annotations for untested genes.
+
+    Formatting
+    ----------
+    - Colors for headers, rows, and lines are controlled via global variables:
+      `headerColor`, `rowOddColor`, `rowEvenColor`, and `lineColor`.
+    - Numeric values are reformatted using an external function `reformat_numbers`.
+
+    Returns
+    -------
+    list of plotly.graph_objs.Figure
+        A list of Plotly `Figure` objects, one for each method in `sig_genes_dict`.
+
+    Notes
+    -----
+    - The function assumes numeric columns requiring formatting contain substrings
+      like 'PVAL' or 'FDR' in their names.
+    - Asterisks (*) annotate genes not tested by other methods, with a footnote added
+      to the table as an annotation.
+
+    Example
+    -------
+    >>> sig_genes_dict = {
+            "Method A only": ["GENE1", "GENE2"],
+            "Method B only": ["GENE3", "GENE4"]
+        }
+    >>> tables = plot_table_comparison(df, sig_genes_dict)
+    >>> for table in tables:
+            table.show()
+
+    This will display separate tables for "Method A only" and "Method B only", showing
+    their respective significant genes.
+    """
+    methods = [k.split(' ')[0] for k in list(sig_genes_dict.keys()) if 'only' in k]
+    fig_tables = []
+    for key in sig_genes_dict:
+        df_plot = df.loc[df.GENE.isin(sig_genes_dict[key])].copy().sort_values('RANK')
+        df_plot = df_plot[['GENE', 'RANK', 'CHROM', 'SIZE_coding'] + [c for c in df_plot.columns if len([m for m in methods if m in c]) > 0] + ['CGC', 'PANCAN']]
+        method_other = [m for m in methods if m not in key]
+        if len(method_other) > 0:
+            table_annot = df_plot['SIG_' + method_other[0]].isna().sum() > 0
+            df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] += '*'
+        else:
+            table_annot = False
+        # formatting data in columns
+        df_plot = format_cols(df_plot)
+        # generate table figure
+        fig_table = go.Figure(data=[go.Table(
+            header=dict(values=['<b>' + col + '</b>' for col in df_plot.columns],
+                        line_color=lineColor,
+                        fill_color=headerColor,
+                        align=['left'] + ['center'] * (len(df_plot.columns) - 1),
+                        font=dict(color='white', size=12)
+                        ),
+            cells=dict(values=[df_plot[col].tolist() for col in df_plot.columns],
+                       line_color=lineColor,
+                       fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_plot.shape[0])]],
+                       align=['left'] + ['center'] * (len(df_plot.columns) - 1),
+                       font=dict(color=lineColor, size=11),
+                       )
+        )])
+        # table height
+        height = 100 + len(df_plot) * 20
+        # add title
+        fig_table.update_layout(
+            title=dict(
+                text='Significant with ' + key + ':',
+                font=dict(size=18),
+                x=0.5,
+                y=(height-1)/height,
+                xanchor='center',
+                yanchor='top',
+            ),
+            margin=dict(r=5, l=5, t=30, b=30),
+            height=height
+        )
+        if table_annot:
+            fig_table.update_layout(
+                annotations=[
+                    dict(
+                        text="{{GENE}}*: Gene not tested by {}".format(method_other[0]),
+                        x=0,
+                        y=-15/(height-60),
+                        xref="paper",
+                        yref="paper",
+                        showarrow=False,
+                        align="left",
+                        valign="top",
+                        font=dict(size=12)
+                    )
+                ]
+            )
+        fig_tables.append(fig_table)
+    return fig_tables
+
+def plot_table_summary(df):
+    """
+    Generate a series of Plotly tables summarizing significant genes across different methods.
+
+    This function identifies subsets of methods based on columns with "SIG_" in their names,
+    generates tables for genes significant in each subset, and displays the tables with
+    enhanced formatting and optional annotations.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame containing gene-related information. Expected columns include:
+        - Columns with the prefix "SIG_" to indicate significance for various methods.
+        - Columns with "PVAL" or "FDR" for numerical reformatting.
+        - Columns "RANK" and "SIZE_coding" for integer formatting.
+        - A "GENE" column to annotate genes.
+
+    Returns
+    -------
+    fig_tables : dict of plotly.graph_objects.Figure
+        A dictionary where keys are method subsets and values are Plotly table figures.
+    """
+
+    # find all method types
+    methods = [c.split('_')[-1] for c in df.columns if 'SIG' in c]
+    # generate all subsets using chain and combinations
+    subsets = chain.from_iterable(combinations(methods, r) for r in range(len(methods) + 1))
+    # sort subsets by length in descending order
+    subsets = sorted(subsets, key=len, reverse=True)[:-1]
+
+    fig_tables = {}
+    for i, s in enumerate(subsets):
+        title_short = ', '.join(s[:-2]) + (', ' if len(s) > 2 else '') + ' and '.join(s[-2:]) + (
+            ' only' if i > 0 else '')
+        title = 'Significant with ' + title_short + ':'
+
+        is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
+        if i == 0:
+            is_keep = is_sig
+            other_methods = []
+        else:
+            other_methods = np.setdiff1d(subsets[0], s).tolist()
+            is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
+            is_keep = np.logical_and(is_sig, is_notsig)
+        dfi = df.loc[is_keep].copy()
+        if len(other_methods) > 0:
+            table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
+            dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
+        else:
+            table_annot = False
+        # formatting data in columns
+        dfi = format_cols(dfi)
+        # generate table figure
+        fig_table = go.Figure(data=[go.Table(
+            header=dict(values=['<b>' + col + '</b>' for col in dfi.columns],
+                        line_color=lineColor,
+                        fill_color=headerColor,
+                        align=['left'] + ['center'] * (len(dfi.columns) - 1),
+                        font=dict(color='white', size=12)
+                        ),
+            cells=dict(values=[dfi[col].tolist() for col in dfi.columns],
+                       line_color=lineColor,
+                       fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(dfi.shape[0])]],
+                       align=['left'] + ['center'] * (len(dfi.columns) - 1),
+                       font=dict(color=lineColor, size=11),
+                       )
+        )])
+        # table height
+        height = 100 + len(dfi) * 20
+        # add title
+        fig_table.update_layout(
+            title=dict(
+                text=title,
+                font=dict(size=18),
+                x=0.5,
+                y=(height - 1) / height,
+                xanchor='center',
+                yanchor='top',
+            ),
+            margin=dict(r=5, l=5, t=30, b=30),
+            height=height
+        )
+        if table_annot:
+            fig_table.update_layout(
+                annotations=[
+                    dict(
+                        text="{GENE}*: Gene not tested by at least one of the other method(s)",
+                        x=0,
+                        y=-15 / (height - 60),
+                        xref="paper",
+                        yref="paper",
+                        showarrow=False,
+                        align="left",
+                        valign="top",
+                        font=dict(size=12)
+                    )
+                ]
+            )
+        fig_tables[title_short] = fig_table
+    return fig_tables
+
+#
+# MAIN FUNCTION THAT GENERATES REPORTS
+
+def generate_reports(
+        path_mutsig,
+        path_dndscv,
+        path_dig,
+        path_cgc,
+        path_pancan,
+        dir_output,
+        prefix_output=None,
+        alp=0.1
+):
+    # Load and Format Output Files of Statistical Methods
+    # collect and process results from different statistical methods
+    df = preprocess_results(path_mutsig, path_dndscv, path_dig, path_cgc, path_pancan, alp)
+    # save the processed results to a TSV file
+    # df.to_csv(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + 'merged_results.tsv', sep='\t', index=False)
+
+    # Generate HTML That Compares Pairs of Statistical Methods
+
+    # html_comparison = """
+    #     <!DOCTYPE html>
+    #     <html lang="en">
+    #     <head>
+    #         <meta charset="UTF-8">
+    #         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    #         <title>Compare Tools</title>
+    #         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    #         <style>
+    #             h1 {{
+    #                 margin-bottom: 20px;
+    #             }}
+    #             label, select {{
+    #                 font-size: 18px;
+    #             }}
+    #             /* Browser Reset */
+    #             * {{
+    #                 margin: 0;
+    #                 padding: 0;
+    #                 box-sizing: border-box;
+    #             }}
+        
+    #             /* Centering Figure Container */
+    #             .figure-container {{
+    #                 display: flex;                /* Flexbox layout */
+    #                 justify-content: center;      /* Horizontal centering */
+    #                 align-items: center;          /* Vertical centering */
+    #                 width: 100%;                  /* Full width container */
+    #                 margin: 10px 0;               /* Spacing around the figure */
+    #             }}
+        
+    #             #fig-plot {{
+    #                 display: inline-block;        /* Ensure it only takes the required width */
+    #                 justify-content: center;      /* Horizontal centering */
+    #                 align-items: center;          /* Vertical centering */
+    #                 max-width: 50%;               /* Optional: Prevent it from being too wide */
+    #             }}
+        
+    #             /* Full-Width Table Container */
+    #             .table-container {{
+    #                 width: 100%;                  /* Table spans full width */
+    #                 margin: 0px 0;               /* Spacing around tables */
+    #             }}
+        
+    #             .plot {{
+    #                 width: 100%;                  /* Full width for tables */
+    #             }}
+    #         </style>
+    #     </head>
+    #     <body>
+    #         <h1>Comparison of Driver Discovery Tool Results for Coding Regions</h1>
+        
+    #         <label for="methods">Tools to compare:</label>
+    #         <select id="methods" onchange="updatePlot()">
+    #             {methods_options}
+    #         </select>
+        
+    #         <!-- Centered Figure -->
+    #         <div class="figure-container">
+    #             <div id="fig-plot" class="plot"></div>
+    #         </div>
+        
+    #         <!-- Full-Width Tables -->
+    #         <div class="table-container">
+    #             <div id="table1-plot" class="plot"></div>
+    #         </div>
+    #         <div class="table-container">
+    #             <div id="table2-plot" class="plot"></div>
+    #         </div>
+    #         <div class="table-container">
+    #             <div id="table3-plot" class="plot"></div>
+    #         </div>
+        
+    #         <script>
+    #             var plotData = {plot_data};
+        
+    #             function updatePlot() {{
+    #                 var methodsTypeKey = document.getElementById("methods").value;
+        
+    #                 var data = plotData[methodsTypeKey];
+        
+    #                 // Update Figure
+    #                 var figData = data.fig;
+    #                 Plotly.react('fig-plot', figData);
+        
+    #                 // Update Tables
+    #                 var table1Data = data.table1;
+    #                 Plotly.react('table1-plot', table1Data);
+        
+    #                 var table2Data = data.table2;
+    #                 Plotly.react('table2-plot', table2Data);
+        
+    #                 var table3Data = data.table3;
+    #                 Plotly.react('table3-plot', table3Data);
+    #             }}
+        
+    #             // Initial plot
+    #             updatePlot();
+    #         </script>
+    #     </body>
+    #     </html>
+    #     """
+    # generate the dropdown options
+    # methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in methods.keys()])
+    # prepare plot data for all dropdown options
+    plot_data = {}
+    for methods_key, methods_val in methods.items():
+        # generate FDR comparison plot
+        fig, sig_genes_dict = plot_fdr_comparison(df, methods_val[0], methods_val[1], alp)
+        # generate table plot
+        fig_table = plot_table_comparison(df, sig_genes_dict)
+        # store plotly figures
+        plot_data[methods_key] = {
+            'fig': fig.to_dict(),
+        }
+        for i, fig_table_i in enumerate(fig_table):
+            plot_data[methods_key][f'table{i+1}'] = fig_table_i.to_dict()
+
+
+    # convert plot data to JSON-like structure
+    # plot_data_json = json.dumps(plot_data)
+    # # combine everything into the final HTML
+    # html_comparison = html_comparison.format(
+    #     methods_options=methods_options,
+    #     plot_data=plot_data_json
+    # )
+    # # save to an HTML file
+    # comparison_path_rel = ('' if (prefix_output is None) else prefix_output + '_') + 'merged_report_comparison.html'
+    # comparison_path = dir_output + '/' + comparison_path_rel
+    # with open(comparison_path, 'w') as f:
+    #     f.write(html_comparison)
+
+    # Generate HTML That Summarizes Statistical Methods
+
+    # html_summary = """
+    #     <!DOCTYPE html>
+    #     <html lang="en">
+    #     <head>
+    #         <meta charset="UTF-8">
+    #         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    #         <title>Summary</title>
+    #         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    #         <style>
+    #             h1 {{
+    #                 margin-bottom: 20px;
+    #             }}
+    #             h2 {{
+    #                 margin-bottom: 10px;
+    #             }}
+    #             label, select {{
+    #                 font-size: 18px;
+    #             }}
+    #             * {{
+    #                 margin: 0;
+    #                 padding: 0;
+    #                 box-sizing: border-box;
+    #             }}
+    #             .table-container {{
+    #                 display: flex;                /* Flexbox layout */
+    #                 justify-content: center;      /* Horizontal centering */
+    #                 align-items: center;          /* Vertical centering */
+    #                 width: 100%;                  /* Full width container */
+    #                 margin: 0px 0;               /* Spacing around the figure */
+    #             }}
+    #             .plot {{
+    #                 width: 100%;                  /* Full width for tables */
+    #             }}
+    #         </style>
+    #     </head>
+    #     <body>
+    #         <h1>Summary of Driver Discovery Tool Results for Coding Regions</h1>
+            
+    #         <h2>Genes Ranked According to Combined FDR</h2>
+            
+    #         <div class="table-container">
+    #             <div class="plot">{table_static}</div>
+    #         </div>
+            
+    #         <h2>Concordance Across Tools</h2>
+            
+    #         <label for="methods">List genes significant with:</label>
+    #         <select id="methods" onchange="updatePlot()">
+    #             {methods_options}
+    #         </select>
+    #         <div class="table-container">
+    #             <div id="table-plot" class="plot"></div>
+    #         </div>
+
+    #         <script>
+    #             var plotData = {plot_data};
+
+    #             function updatePlot() {{
+    #                 var methodsTypeKey = document.getElementById("methods").value;
+
+    #                 var data = plotData[methodsTypeKey];
+
+    #                 // Update Dynamic Table
+    #                 var tableData = data.table;
+    #                 Plotly.react('table-plot', tableData);
+    #             }}
+
+    #             // Initial plot
+    #             updatePlot();
+    #         </script>
+    #     </body>
+    #     </html>
+    #         """
+
+    # Genrate dynamic table of HTML:
+    fig_tables = plot_table_summary(df)
+    # generate the dropdown options
+    methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in fig_tables.keys()])
+    # prepare plot data for all dropdown options
+    plot_data = {}
+    for key in fig_tables:
+        plot_data[key] = {
+            'table': fig_tables[key].to_dict(),
+        }
+    # convert plot data to JSON-like structure
+    plot_data_json = json.dumps(plot_data)
+
+    # Generate static table of HTML:
+    # find significant genes w.r.t combined FDR
+    ind_sig = df['FDR_min'] <= alp
+    n_rows = max(n_rows_min, int(np.sum(ind_sig) * (1 + n_rows_buffer)))
+    df_table = df.iloc[:n_rows].copy()
+    # generate table figure
+    df_table = format_cols(df_table)
+    # making the significant rows bold
+    for i in range(df_table.shape[0]):
+        if ind_sig[i]:
+            df_table.loc[i, :] = '<b>' + df_table.loc[i, :].astype(str) + '</b>'
+
+    fig_table_static = go.Figure(data=[go.Table(
+        header=dict(values=['<b>' + col + '</b>' for col in df_table.columns],
+                    line_color='darkslategray',
+                    fill_color=headerColor,
+                    align=['left'] + ['center'] * (len(df_table.columns) - 1),
+                    font=dict(color='white', size=12)
+                    ),
+        cells=dict(values=[df_table[col].tolist() for col in df_table.columns],
+                   line_color='darkslategray',
+                   fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_table.shape[0])]],
+                   align=['left'] + ['center'] * (len(df_table.columns) - 1),
+                   font=dict(color='darkslategray', size=11),
+                   # format=['html'] * len(df_plot.columns)  # Enable HTML formatting
+                   )
+    )])
+
+    # # save static figure as HTML div
+    # table_static_html = fig_table_static.to_html(full_html=False, include_plotlyjs='cdn')
+
+    # # combine everything into the final HTML
+    # html_summary = html_summary.format(
+    #     methods_options=methods_options,
+    #     plot_data=plot_data_json,
+    #     table_static=table_static_html
+    # )
+    # # save to an HTML file
+    # summary_path_rel = ('' if (prefix_output is None) else prefix_output + '_') + 'merged_report_summary.html'
+    # summary_path = dir_output + '/' + summary_path_rel
+    # with open(summary_path, 'w') as f:
+    #     f.write(html_summary)
+
+    # html_main_report = f"""
+    #     <!DOCTYPE html>
+    #     <html lang="en">
+    #     <head>
+    #         <meta charset="UTF-8">
+    #         <meta name="viewport" content="width=device-width">
+    #         <title>Driver Discovery Suit Report</title>
+    #         <style>
+    #             .report-section {{
+    #                 display: none;
+    #             }}
+    #             .active {{
+    #                 display: block;
+    #             }}
+    #             .navbar {{
+    #                 overflow: hidden;
+    #                 background-color: #333;
+    #             }}
+    #             .navbar a {{
+    #                 float: left;
+    #                 display: block;
+    #                 color: #f2f2f2;
+    #                 text-align: center;
+    #                 padding: 14px 16px;
+    #                 text-decoration: none;
+    #             }}
+    #             .navbar a:hover {{
+    #                 background-color: #ddd;
+    #                 color: black;
+    #             }}
+    #             .navbar a.active-link {{
+    #                 background-color: white;
+    #                 color: black;
+    #             }}
+    #             iframe {{
+    #                 width: 100%;
+    #                 height: 1000px;
+    #                 border: none;
+    #             }}
+    #         </style>
+    #     </head>
+    #     <body>
+    #         <div class="navbar">
+    #             <a href="#" onclick="showReport('summary', '{summary_path_rel}')">Summary</a>
+    #             <a href="#" onclick="showReport('comparison', '{comparison_path_rel}')">Comparison</a>
+    #         </div>
+
+    #         <div id="summary" class="report-section active">
+    #             <iframe id="report-frame" src="{summary_path_rel}"></iframe>
+    #         </div>
+
+    #         <script>
+    #             function showReport(reportId, reportUrl) {{
+    #                 var iframe = document.getElementById('report-frame');
+    #                 iframe.src = reportUrl;
+
+    #                 var links = document.querySelectorAll('.navbar a');
+    #                 links.forEach(link => link.classList.remove('active-link'));
+
+    #                 var activeLink = document.querySelector(`.navbar a[onclick*="${{reportId}}"]`);
+    #                 activeLink.classList.add('active-link');
+    #             }}
+    #         </script>
+    #     </body>
+    #     </html>
+    #     """
+    # # save to an HTML file
+    # with open(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + f'merged_report_main.html',
+    #           'w') as f:
+    #     f.write(html_main_report)

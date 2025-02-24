@@ -1,5 +1,4 @@
 from dash import dcc, html
-from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import dash_daq as daq
@@ -8,7 +7,7 @@ from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 
 from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
@@ -18,7 +17,7 @@ from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
 from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_VALUES, COMPARISON_DROPDOWN_VALUES, SUMMARY_DROPDOWN_VALUES
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS
 
 import pandas as pd
 import numpy as np
@@ -34,21 +33,27 @@ def gen_dNdScv_app_component_data_callback(
     idx,
     dnd_radio_item_selection,
     dnds_dropdown_value,
-
+    dnds_dropdowm_options # Dropdowm menu option State
 ):
     all_page_content = []
+    results_dropdown_values = [dict_option['value'] for dict_option in RESULTS_DROPDOWN_OPTIONS]
+    comparison_dropdown_values = [dict_option['value'] for dict_option in COMPARISON_DROPDOWN_OPTIONS]
+    summary_dropdown_values = [dict_option['value'] for dict_option in SUMMARY_DROPDOWN_OPTIONS]
+
     dnd_df_plot = data.df[SNV_DATA_COLUMN_NAME][0][DND_PLOT_DATAFRAME_IDX]
     dnd_df_merged = data.df[SNV_DATA_COLUMN_NAME][0][DND_MERGED_DATAFRAME_IDX]
     dnd_df_global = data.df[SNV_DATA_COLUMN_NAME][0][DND_GLOBAL_DATAFRAME_IDX]
     # num_gene_key = 'All'
     # figure1 = go.Figure()
+
     if dnds_dropdown_value is None:
         dnds_dropdown_value = 'All'
 
     if dnd_radio_item_selection == "Results":
-
-        if dnds_dropdown_value is not RESULTS_DROPDOWN_VALUES:
+        if dnds_dropdown_value not in results_dropdown_values:
             dnds_dropdown_value = 'All'
+        # if dnds_dropdowm_options != RESULTS_DROPDOWN_OPTIONS:
+        #     dnds_dropdown_value = 'All'
 
         all_page_content = gen_dndscv_results_app_component(
                 dnd_df_plot,
@@ -60,7 +65,9 @@ def gen_dNdScv_app_component_data_callback(
     
     elif dnd_radio_item_selection == "Comparison":
 
-        if dnds_dropdown_value is not COMPARISON_DROPDOWN_VALUES:
+        # if dnds_dropdown_value != COMPARISON_DROPDOWN_OPTIONS:
+        #     dnds_dropdown_value = "MutSig2 vs dNdScv"
+        if dnds_dropdown_value not in comparison_dropdown_values:
             dnds_dropdown_value = "MutSig2 vs dNdScv"
 
         all_page_content = gen_dndscv_comparison_app_component(
@@ -73,7 +80,8 @@ def gen_dNdScv_app_component_data_callback(
         
     elif dnd_radio_item_selection == "Summary":
 
-        if dnds_dropdown_value is not SUMMARY_DROPDOWN_VALUES:
+        # if dnds_dropdown_value != SUMMARY_DROPDOWN_OPTIONS:
+        if dnds_dropdown_value not in summary_dropdown_values:
             dnds_dropdown_value = "MutSig2, dNdScv, and DIG"
 
         all_page_content = gen_dndscv_summary_app_component(
@@ -235,7 +243,14 @@ def gen_dnd_scv_app_component():
             Input('dnds-report-type-radioitems', 'value'),
             Input('dnds-gene-dropdown', 'value')
         ],
+        # gives the value to new_data_callback/internal_data_callback, 
+        # the callback is not triggered but need to pass in the state after input parameters
+        callback_state=[
+            State('dnds-gene-dropdown', 'options')
+        ],
+
         callback_output=[
+            Output('dnds-report-table', 'data'),
             # dNdScv figures
             Output('dnds-qq-graph', 'figure'),
             Output('dnds-mutation-ratio-graph', 'figure'),

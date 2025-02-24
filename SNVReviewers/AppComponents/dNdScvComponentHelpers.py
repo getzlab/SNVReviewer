@@ -27,29 +27,29 @@ from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
 
-RESULTS_DROPDOWN_VALUES = [
+RESULTS_DROPDOWN_OPTIONS = [
     {'label':'All', 'value': 'all'},
-    {'label': 'First 30', 'value': 30},
-    {'label': 'First 20', 'value': 20},
-    {'label': 'First 10', 'value': 10},
-    {'label': 'None', 'value': None}
+    {'label': 'First 30', 'value': 'First 30'},
+    {'label': 'First 20', 'value': 'First 20'},
+    {'label': 'First 10', 'value': 'First 10'},
+    {'label': 'None', 'value': 'None'}
 ]
-COMPARISON_DROPDOWN_VALUES = [
-    {'label': "MutSig2 vs dNdScv", 'value':1}, 
-    {'label': "MutSig2 vs DIG", 'value':2}, 
-    {'label': "dNdScv vs DIG", 'value':3}
+COMPARISON_DROPDOWN_OPTIONS = [
+    {'label': "MutSig2 vs dNdScv", 'value':"MutSig2 vs dNdScv"}, 
+    {'label': "MutSig2 vs DIG", 'value':"MutSig2 vs DIG"}, 
+    {'label': "dNdScv vs DIG", 'value':"dNdScv vs DIG"}
 ]
-SUMMARY_DROPDOWN_VALUES = [
-    {'label': "MutSig2, dNdScv, and DIG", 'value':1}, 
-    {'label': "MutSig2 and dNdScv only", 'value':2}, 
-    {'label': "MutSig2 and DIG only", 'value':3},
-    {'label': "dNdScv and DIG only", 'value':4}, 
-    {'label': "MutSig2 only", 'value':5}, 
-    {'label': "dNdScv only", 'value':6}, 
-    {'label': "DIG only", 'value':7}
+SUMMARY_DROPDOWN_OPTIONS = [
+    {'label': "MutSig2, dNdScv, and DIG", 'value':"MutSig2, dNdScv, and DIG"}, 
+    {'label': "MutSig2 and dNdScv only", 'value':"MutSig2 and dNdScv only"}, 
+    {'label': "MutSig2 and DIG only", 'value':"MutSig2 and DIG only"},
+    {'label': "dNdScv and DIG only", 'value':"dNdScv and DIG only"}, 
+    {'label': "MutSig2 only", 'value':"MutSig2 only"}, 
+    {'label': "dNdScv only", 'value':"dNdScv only"}, 
+    {'label': "DIG only", 'value':"DIG only"}
 ]
 
-QQ_PLOT_RESULT_STYLE = {"width":"1400px"}
+QQ_PLOT_RESULT_STYLE = {"width":"1200px"}
 DNDS_GLOBAL_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_MIS_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_TRUNC_RESULT_STYLE = {'display':'block', 'width':'600px'}
@@ -88,7 +88,11 @@ def gen_dndscv_results_app_component(
     # figure1 = go.Figure()
 
     qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
+
+    # NEED TO REFORMAT THE dnd_df_plot dataframe for 2 point decimal precision
     all_page_content = [
+        
+            dnd_df_plot.to_dict('records'),
             # dndscv report figures
             qq_fig,
             fig_dnds_global,
@@ -102,7 +106,7 @@ def gen_dndscv_results_app_component(
             DNDS_TRUNC_RESULT_STYLE, 
             
             dnd_radio_item_selection,
-            RESULTS_DROPDOWN_VALUES,
+            RESULTS_DROPDOWN_OPTIONS,
             DNDS_RESULTS_DROPDOWM_LABEL,
 
             debugging
@@ -131,6 +135,7 @@ def gen_dndscv_comparison_app_component(
     figure4 = go.Figure()
 
     all_page_content = [
+        dnd_df_plot.to_dict('records'),
         figure1,
         figure2, 
         figure3,
@@ -142,7 +147,7 @@ def gen_dndscv_comparison_app_component(
         HIDE_PLOTS_STYLE,
 
         dnd_radio_item_selection,
-        COMPARISON_DROPDOWN_VALUES,
+        COMPARISON_DROPDOWN_OPTIONS,
         DNDS_COMPARISON_DROPDOWM_LABEL,
 
         debugging
@@ -167,6 +172,7 @@ def gen_dndscv_summary_app_component(
     figure4 = go.Figure()
 
     all_page_content = [
+        dnd_df_plot.to_dict('records'),
         figure1,
         figure2, 
         figure3,
@@ -178,7 +184,7 @@ def gen_dndscv_summary_app_component(
         HIDE_PLOTS_STYLE,
 
         dnd_radio_item_selection,
-        SUMMARY_DROPDOWN_VALUES,
+        SUMMARY_DROPDOWN_OPTIONS,
         DNDS_SUMMARY_DROPDOWM_LABEL,
 
         debugging
