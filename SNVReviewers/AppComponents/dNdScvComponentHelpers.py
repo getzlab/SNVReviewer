@@ -91,7 +91,7 @@ def gen_dndscv_results_app_component(
     dnd_df_plot = dnd_df_plot.copy()
     dnd_df_merged = dnd_df_merged.copy()
     dnd_df_global = dnd_df_global.copy()
-    table = pd.DataFrame().to_dict('records')
+    table = go.Figure()
     fig_table = go.Figure()
     # table3 = pd.DataFrame().to_dict('records')
 
@@ -165,7 +165,7 @@ def gen_dndscv_comparison_app_component(
     # table2 = pd.DataFrame().to_dict('records')
     # table3 = pd.DataFrame().to_dict('records')
     # table4 = pd.DataFrame().to_dict('records')
-    table5 = pd.DataFrame().to_dict('records')
+    table5 = go.Figure()
 
     comparison_fig, [comaprison_table1, comaprison_table2, comaprison_table3] = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
 
@@ -222,10 +222,15 @@ def gen_dndscv_summary_app_component(
     figure5 = go.Figure()
     
     summary_table1 = dnd_df_plot.to_dict('records')
-    summary_table2 = pd.DataFrame().to_dict('records')
+    # summary_table2 = pd.DataFrame().to_dict('records')
 
     # FINISH THIS LATER!!!
-    # summary_table2 = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
+    print("before I try to generate dnds summary table!!")
+    # summary_table_dict, all_titles = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
+    summary_table2 = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
+    print("this is dropdown_menu_value: ", dropdown_menu_value)
+    # print("these are the keys in the summary table dict: ", list(summary_table_dict.keys()))
+    # summary_table2 = summary_table_dict[dropdown_menu_value]
     comparison_table = go.Figure()
 
     # table5 = dnd_df_merged.to_dict('records'),

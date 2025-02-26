@@ -3034,7 +3034,7 @@ def plot_table_comparison(df, sig_genes_dict):
     """
     methods = [k.split(' ')[0] for k in list(sig_genes_dict.keys()) if 'only' in k]
     fig_tables = []
-    
+
     for key in sig_genes_dict:
         df_plot = df.loc[df.GENE.isin(sig_genes_dict[key])].copy().sort_values('RANK')
         df_plot = df_plot[['GENE', 'RANK', 'CHROM', 'SIZE_coding'] + [c for c in df_plot.columns if len([m for m in methods if m in c]) > 0] + ['CGC', 'PANCAN']]
@@ -3095,7 +3095,7 @@ def plot_table_comparison(df, sig_genes_dict):
         fig_tables.append(fig_table)
     return fig_tables
 
-def gen_dnds_summary_table(df, method_option):
+def gen_dnds_summary_table(df, dropdown_menu_value):
     """
     Generate a series of Plotly tables summarizing significant genes across different methods.
 
@@ -3119,82 +3119,96 @@ def gen_dnds_summary_table(df, method_option):
     """
 
     # find all method types
-    methods = [c.split('_')[-1] for c in df.columns if 'SIG' in c]
+    methods_significance = [c.split('_')[-1] for c in df.columns if 'SIG' in c]
+
     # generate all subsets using chain and combinations
-    subsets = chain.from_iterable(combinations(methods, r) for r in range(len(methods) + 1))
+    subsets = chain.from_iterable(combinations(methods_significance, r) for r in range(len(methods_significance) + 1))
     # sort subsets by length in descending order
     subsets = sorted(subsets, key=len, reverse=True)[:-1]
+    print("This is subset: ", subsets)
+    all_titles = []
 
     fig_tables = {}
-    for i, s in enumerate(subsets):
-        title_short = ', '.join(s[:-2]) + (', ' if len(s) > 2 else '') + ' and '.join(s[-2:]) + (
-            ' only' if i > 0 else '')
-        title = 'Significant with ' + title_short + ':'
+    # for i, s in enumerate(subsets):
+        # title_short = ', '.join(s[:-2]) + (', ' if len(s) > 2 else '') + ' and '.join(s[-2:]) + (
+        #     ' only' if i > 0 else '')
+    title_short = dropdown_menu_value
+    title = 'Significant with ' + title_short + ':'
 
-        is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
-        if i == 0:
-            is_keep = is_sig
-            other_methods = []
-        else:
-            other_methods = np.setdiff1d(subsets[0], s).tolist()
-            is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
-            is_keep = np.logical_and(is_sig, is_notsig)
-        dfi = df.loc[is_keep].copy()
-        if len(other_methods) > 0:
-            table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
-            dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
-        else:
-            table_annot = False
-        # formatting data in columns
-        dfi = format_cols(dfi)
-        # generate table figure
-        fig_table = go.Figure(data=[go.Table(
-            header=dict(values=['<b>' + col + '</b>' for col in dfi.columns],
-                        line_color=lineColor,
-                        fill_color=headerColor,
-                        align=['left'] + ['center'] * (len(dfi.columns) - 1),
-                        font=dict(color='white', size=12)
-                        ),
-            cells=dict(values=[dfi[col].tolist() for col in dfi.columns],
-                       line_color=lineColor,
-                       fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(dfi.shape[0])]],
-                       align=['left'] + ['center'] * (len(dfi.columns) - 1),
-                       font=dict(color=lineColor, size=11),
-                       )
-        )])
-        # table height
-        height = 100 + len(dfi) * 20
-        # add title
-        fig_table.update_layout(
-            title=dict(
-                text=title,
-                font=dict(size=18),
-                x=0.5,
-                y=(height - 1) / height,
-                xanchor='center',
-                yanchor='top',
-            ),
-            margin=dict(r=5, l=5, t=30, b=30),
-            height=height
-        )
-        if table_annot:
-            fig_table.update_layout(
-                annotations=[
-                    dict(
-                        text="{GENE}*: Gene not tested by at least one of the other method(s)",
-                        x=0,
-                        y=-15 / (height - 60),
-                        xref="paper",
-                        yref="paper",
-                        showarrow=False,
-                        align="left",
-                        valign="top",
-                        font=dict(size=12)
+    # ADDED THIS LINE IN!!
+    # all_titles.append(title_short)
+    # MutSig2, dNdScv, and DIG
+    []
+
+    is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
+    if title_short == "MutSig2, dNdScv, and DIG":
+        is_keep = is_sig
+        other_methods = []
+    else:
+        other_methods = np.setdiff1d(subsets[0], s).tolist()
+        is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
+        is_keep = np.logical_and(is_sig, is_notsig)
+    dfi = df.loc[is_keep].copy()
+    if len(other_methods) > 0:
+        table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
+        dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
+    else:
+        table_annot = False
+
+    # formatting data in columns
+    dfi = format_cols(dfi)
+
+    # generate table figure
+    fig_table = go.Figure(data=[go.Table(
+        header=dict(values=['<b>' + col + '</b>' for col in dfi.columns if col != 'CHROM'],
+                    line_color=lineColor,
+                    fill_color=headerColor,
+                    align=['left'] + ['center'] * (len(dfi.columns) - 2),#(len(dfi.columns) - 1),
+                    font=dict(color='white', size=12)
+                    ),
+        cells=dict(values=[dfi[col].tolist() for col in dfi.columns if col != 'CHROM'],
+                    line_color=lineColor,
+                    fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(dfi.shape[0])]],
+                    align=['left'] + ['center'] * (len(dfi.columns) - 2),#(len(dfi.columns) - 1),
+                    font=dict(color=lineColor, size=11),
                     )
-                ]
-            )
-        fig_tables[title_short] = fig_table
-    return fig_tables
+    )])
+    # table height
+    height = 100 + len(dfi) * 20
+    # add title
+    fig_table.update_layout(
+        title=dict(
+            text=title,
+            font=dict(size=18),
+            x=0.5,
+            y=(height - 1) / height,
+            xanchor='center',
+            yanchor='top',
+        ),
+        margin=dict(r=5, l=5, t=30, b=30),
+        height=height
+    )
+    if table_annot:
+        fig_table.update_layout(
+            annotations=[
+                dict(
+                    text="{GENE}*: Gene not tested by at least one of the other method(s)",
+                    x=0,
+                    y=-15 / (height - 60),
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    align="left",
+                    valign="top",
+                    font=dict(size=12)
+                )
+            ]
+        )
+    # fig_tables[title_short] = fig_table
+    print("this is title_short: ", title_short)
+        
+    # return fig_tables, all_titles
+    return fig_table
 
 def generate_dnds_comparison_dataframe(
         path_mutsig,

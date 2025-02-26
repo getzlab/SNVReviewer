@@ -316,32 +316,36 @@ def gen_dNdScv_app_component_layout():
                 ),
                 html.Div(
                     children=[
-                        # html.H2('Summary Tables'),
-                        dash_table.DataTable(
-                        id='dnds-summary-table',
-                        columns=[
-                            {"name": i,
-                                "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
-                        ],
-                        data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
-                            'records'),
-                        editable=False,
-                        filter_action="native",
-                        sort_action="native",
-                        sort_mode="multi",
-                        row_selectable="single",
-                        row_deletable=False,
-                        selected_columns=[],
-                        selected_rows=[0],
-                        page_action="native",
-                        page_current=0,
-                        page_size=5,
+                        dcc.Graph(id='dnds-summary-table',
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                )
+                        # # html.H2('Summary Tables'),
+                        # dash_table.DataTable(
+                        # id='dnds-summary-table',
+                        # columns=[
+                        #     {"name": i,
+                        #         "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
+                        # ],
+                        # data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
+                        #     'records'),
+                        # editable=False,
+                        # filter_action="native",
+                        # sort_action="native",
+                        # sort_mode="multi",
+                        # row_selectable="single",
+                        # row_deletable=False,
+                        # selected_columns=[],
+                        # selected_rows=[0],
+                        # page_action="native",
+                        # page_current=0,
+                        # page_size=5,
                     
-                        # changing the width of the data table to 
-                        style_table={
-                            'display':"none"
-                            },
-                        ),
+                        # # changing the width of the data table to 
+                        # style_table={
+                        #     'display':"none"
+                        #     },
+                        # ),
                     ]
                 ),
                 # Graphs below the coding region table
@@ -395,7 +399,7 @@ def gen_dnd_scv_app_component():
             Output('dnds-comparison-table1', 'figure'),
             Output('dnds-comparison-table2', 'figure'),
             Output('dnds-comparison-table3', 'figure'),
-            Output('dnds-summary-table', 'data'),
+            Output('dnds-summary-table', 'figure'),
 
 
             # dNdScv figures
@@ -417,7 +421,7 @@ def gen_dnd_scv_app_component():
             Output('dnds-comparison-table1', 'style'),
             Output('dnds-comparison-table2', 'style'),
             Output('dnds-comparison-table3', 'style'),
-            Output('dnds-summary-table', 'style_table'),
+            Output('dnds-summary-table', 'style'),
 
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),
