@@ -2541,7 +2541,6 @@ color_neither = 'black'
 opacity=0.6
 
 # Table Plot
-
 headerColor = 'grey'
 rowEvenColor = 'lightgrey'
 rowOddColor = 'white'
@@ -2564,9 +2563,9 @@ methods = {
     'MutSig2CV vs DIG': ['MutSig2CV', 'DIG'],
     'dNdScv vs DIG': ['dNdScv', 'DIG']
 }
+
 #
 # UTILITY FUNCTIONS
-
 def reformat_numbers(x, format='{:.2E}'):
     """
     Reformat numbers in an array to a specific format
@@ -2665,8 +2664,7 @@ def preprocess_results(
         path_mutsig,
         path_dndscv,
         path_dig,
-        # path_cgc,
-        # path_pancan,
+        path_dig_coding=None,
         alp=0.1
 ):
     """
@@ -2718,8 +2716,19 @@ def preprocess_results(
         ['PVAL_dNdScv', 'FDR_dNdScv']]
     # load DIG output
     df_dig = pd.read_csv(path_dig, sep='\t', low_memory=False).set_index('GENE')
-    df_dig = df_dig.rename(columns={'SIZE_coding': 'SIZE_DIG', 'PVAL_coding_MUT_recalc': 'PVAL_DIG'})[
-        ['CHROM', 'SIZE_DIG', 'PVAL_DIG']]
+
+    # MAKE SURE TO GENERALIZE THIS SO IT CAN HANDLE DIFFERENT COHORTS AND HAS THE chrom COLUMN WITHIN THE COMBINED DIG DATAFRAME ALREADY
+    try:
+        df_dig = df_dig.rename(columns={'SIZE_coding': 'SIZE_DIG', 'PVAL_coding_MUT_recalc': 'PVAL_DIG'})[
+            ['CHROM', 'SIZE_DIG', 'PVAL_DIG']]
+    except:
+        # assumes certain columns are not in the df_dig dataframe!!
+        df_coding = pd.read_csv(path_dig_coding, sep='\t')
+        df_coding = df_coding[['CHROM', 'GENE', 'GENE_LENGTH']]
+        df_dig = df_dig.merge(df_coding, on='GENE', how='outer')#, suffixes=('_left', '_right'))
+        df_dig = df_dig.rename(columns={'SIZE_coding': 'SIZE_DIG', 'PVAL_coding_MUT_recalc': 'PVAL_DIG'})[
+            ['CHROM', 'SIZE_DIG', 'PVAL_DIG']]
+
     df_dig['FDR_DIG'] = fdrcorrection(df_dig['PVAL_DIG'].astype(float))[1]
     df_dig['SIZE_DIG'] = df_dig['SIZE_DIG'].astype(int)
     # add coding region sizes
@@ -2741,8 +2750,7 @@ def preprocess_results(
 
     path_cgc = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
     path_pancan = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
-    # path_cgc = ''
-    # path_pancan = ''
+    
     # add indicators of CGC and PanCanAtlas membership
     cgc_list = pd.read_csv(path_cgc, sep='\t').to_numpy().flatten()
     pancan_list = pd.read_csv(path_pancan, sep='\t').to_numpy().flatten()
@@ -3026,6 +3034,7 @@ def plot_table_comparison(df, sig_genes_dict):
     """
     methods = [k.split(' ')[0] for k in list(sig_genes_dict.keys()) if 'only' in k]
     fig_tables = []
+    
     for key in sig_genes_dict:
         df_plot = df.loc[df.GENE.isin(sig_genes_dict[key])].copy().sort_values('RANK')
         df_plot = df_plot[['GENE', 'RANK', 'CHROM', 'SIZE_coding'] + [c for c in df_plot.columns if len([m for m in methods if m in c]) > 0] + ['CGC', 'PANCAN']]
@@ -3086,7 +3095,7 @@ def plot_table_comparison(df, sig_genes_dict):
         fig_tables.append(fig_table)
     return fig_tables
 
-def plot_table_summary(df):
+def gen_dnds_summary_table(df, method_option):
     """
     Generate a series of Plotly tables summarizing significant genes across different methods.
 
@@ -3187,253 +3196,69 @@ def plot_table_summary(df):
         fig_tables[title_short] = fig_table
     return fig_tables
 
-#
-# MAIN FUNCTION THAT GENERATES REPORTS
-
-def generate_reports(
+def generate_dnds_comparison_dataframe(
         path_mutsig,
         path_dndscv,
         path_dig,
-        path_cgc,
-        path_pancan,
-        dir_output,
-        prefix_output=None,
+        path_dig_coding=None,
         alp=0.1
 ):
     # Load and Format Output Files of Statistical Methods
     # collect and process results from different statistical methods
-    df = preprocess_results(path_mutsig, path_dndscv, path_dig, path_cgc, path_pancan, alp)
+    df = preprocess_results(path_mutsig, path_dndscv, path_dig, path_dig_coding=path_dig_coding,alp=alp)
+
+    return df
+
+def gen_dnds_comparison_plot(
+        df,
+        methods_key,
+        alp=0.1
+    ):
     # save the processed results to a TSV file
     # df.to_csv(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + 'merged_results.tsv', sep='\t', index=False)
 
     # Generate HTML That Compares Pairs of Statistical Methods
 
-    # html_comparison = """
-    #     <!DOCTYPE html>
-    #     <html lang="en">
-    #     <head>
-    #         <meta charset="UTF-8">
-    #         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    #         <title>Compare Tools</title>
-    #         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    #         <style>
-    #             h1 {{
-    #                 margin-bottom: 20px;
-    #             }}
-    #             label, select {{
-    #                 font-size: 18px;
-    #             }}
-    #             /* Browser Reset */
-    #             * {{
-    #                 margin: 0;
-    #                 padding: 0;
-    #                 box-sizing: border-box;
-    #             }}
-        
-    #             /* Centering Figure Container */
-    #             .figure-container {{
-    #                 display: flex;                /* Flexbox layout */
-    #                 justify-content: center;      /* Horizontal centering */
-    #                 align-items: center;          /* Vertical centering */
-    #                 width: 100%;                  /* Full width container */
-    #                 margin: 10px 0;               /* Spacing around the figure */
-    #             }}
-        
-    #             #fig-plot {{
-    #                 display: inline-block;        /* Ensure it only takes the required width */
-    #                 justify-content: center;      /* Horizontal centering */
-    #                 align-items: center;          /* Vertical centering */
-    #                 max-width: 50%;               /* Optional: Prevent it from being too wide */
-    #             }}
-        
-    #             /* Full-Width Table Container */
-    #             .table-container {{
-    #                 width: 100%;                  /* Table spans full width */
-    #                 margin: 0px 0;               /* Spacing around tables */
-    #             }}
-        
-    #             .plot {{
-    #                 width: 100%;                  /* Full width for tables */
-    #             }}
-    #         </style>
-    #     </head>
-    #     <body>
-    #         <h1>Comparison of Driver Discovery Tool Results for Coding Regions</h1>
-        
-    #         <label for="methods">Tools to compare:</label>
-    #         <select id="methods" onchange="updatePlot()">
-    #             {methods_options}
-    #         </select>
-        
-    #         <!-- Centered Figure -->
-    #         <div class="figure-container">
-    #             <div id="fig-plot" class="plot"></div>
-    #         </div>
-        
-    #         <!-- Full-Width Tables -->
-    #         <div class="table-container">
-    #             <div id="table1-plot" class="plot"></div>
-    #         </div>
-    #         <div class="table-container">
-    #             <div id="table2-plot" class="plot"></div>
-    #         </div>
-    #         <div class="table-container">
-    #             <div id="table3-plot" class="plot"></div>
-    #         </div>
-        
-    #         <script>
-    #             var plotData = {plot_data};
-        
-    #             function updatePlot() {{
-    #                 var methodsTypeKey = document.getElementById("methods").value;
-        
-    #                 var data = plotData[methodsTypeKey];
-        
-    #                 // Update Figure
-    #                 var figData = data.fig;
-    #                 Plotly.react('fig-plot', figData);
-        
-    #                 // Update Tables
-    #                 var table1Data = data.table1;
-    #                 Plotly.react('table1-plot', table1Data);
-        
-    #                 var table2Data = data.table2;
-    #                 Plotly.react('table2-plot', table2Data);
-        
-    #                 var table3Data = data.table3;
-    #                 Plotly.react('table3-plot', table3Data);
-    #             }}
-        
-    #             // Initial plot
-    #             updatePlot();
-    #         </script>
-    #     </body>
-    #     </html>
-    #     """
     # generate the dropdown options
-    # methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in methods.keys()])
     # prepare plot data for all dropdown options
     plot_data = {}
-    for methods_key, methods_val in methods.items():
-        # generate FDR comparison plot
-        fig, sig_genes_dict = plot_fdr_comparison(df, methods_val[0], methods_val[1], alp)
-        # generate table plot
-        fig_table = plot_table_comparison(df, sig_genes_dict)
-        # store plotly figures
-        plot_data[methods_key] = {
-            'fig': fig.to_dict(),
-        }
-        for i, fig_table_i in enumerate(fig_table):
-            plot_data[methods_key][f'table{i+1}'] = fig_table_i.to_dict()
+    methods_val = methods[methods_key]
+    # for methods_key, methods_val in methods.items():
+    # generate FDR comparison plot
+    comparison_fig, sig_genes_dict = plot_fdr_comparison(df, methods_val[0], methods_val[1], alp)
+    # generate table plot
+    fig_table = plot_table_comparison(df, sig_genes_dict)
+    # store plotly figures
+    plot_data[methods_key] = {
+        'fig': comparison_fig.to_dict(),
+    }
+    for i, fig_table_i in enumerate(fig_table):
+        plot_data[methods_key][f'table{i+1}'] = fig_table_i.to_dict()
+        
+        # tables = [table.to_dict('records') for table in fig_table]
 
 
-    # convert plot data to JSON-like structure
+    # # Genrate dynamic table of HTML:
+    # fig_tables = gen_dnds_summary_table(df)
+    
+    # # generate the dropdown options
+    # methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in fig_tables.keys()])
+
+    # # prepare plot data for all dropdown options
+    # plot_data = {}
+    # for key in fig_tables:
+    #     plot_data[key] = {
+    #         'table': fig_tables[key].to_dict(),
+    #     }
+    # # convert plot data to JSON-like structure
     # plot_data_json = json.dumps(plot_data)
-    # # combine everything into the final HTML
-    # html_comparison = html_comparison.format(
-    #     methods_options=methods_options,
-    #     plot_data=plot_data_json
-    # )
-    # # save to an HTML file
-    # comparison_path_rel = ('' if (prefix_output is None) else prefix_output + '_') + 'merged_report_comparison.html'
-    # comparison_path = dir_output + '/' + comparison_path_rel
-    # with open(comparison_path, 'w') as f:
-    #     f.write(html_comparison)
-
-    # Generate HTML That Summarizes Statistical Methods
-
-    # html_summary = """
-    #     <!DOCTYPE html>
-    #     <html lang="en">
-    #     <head>
-    #         <meta charset="UTF-8">
-    #         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    #         <title>Summary</title>
-    #         <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    #         <style>
-    #             h1 {{
-    #                 margin-bottom: 20px;
-    #             }}
-    #             h2 {{
-    #                 margin-bottom: 10px;
-    #             }}
-    #             label, select {{
-    #                 font-size: 18px;
-    #             }}
-    #             * {{
-    #                 margin: 0;
-    #                 padding: 0;
-    #                 box-sizing: border-box;
-    #             }}
-    #             .table-container {{
-    #                 display: flex;                /* Flexbox layout */
-    #                 justify-content: center;      /* Horizontal centering */
-    #                 align-items: center;          /* Vertical centering */
-    #                 width: 100%;                  /* Full width container */
-    #                 margin: 0px 0;               /* Spacing around the figure */
-    #             }}
-    #             .plot {{
-    #                 width: 100%;                  /* Full width for tables */
-    #             }}
-    #         </style>
-    #     </head>
-    #     <body>
-    #         <h1>Summary of Driver Discovery Tool Results for Coding Regions</h1>
-            
-    #         <h2>Genes Ranked According to Combined FDR</h2>
-            
-    #         <div class="table-container">
-    #             <div class="plot">{table_static}</div>
-    #         </div>
-            
-    #         <h2>Concordance Across Tools</h2>
-            
-    #         <label for="methods">List genes significant with:</label>
-    #         <select id="methods" onchange="updatePlot()">
-    #             {methods_options}
-    #         </select>
-    #         <div class="table-container">
-    #             <div id="table-plot" class="plot"></div>
-    #         </div>
-
-    #         <script>
-    #             var plotData = {plot_data};
-
-    #             function updatePlot() {{
-    #                 var methodsTypeKey = document.getElementById("methods").value;
-
-    #                 var data = plotData[methodsTypeKey];
-
-    #                 // Update Dynamic Table
-    #                 var tableData = data.table;
-    #                 Plotly.react('table-plot', tableData);
-    #             }}
-
-    #             // Initial plot
-    #             updatePlot();
-    #         </script>
-    #     </body>
-    #     </html>
-    #         """
-
-    # Genrate dynamic table of HTML:
-    fig_tables = plot_table_summary(df)
-    # generate the dropdown options
-    methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in fig_tables.keys()])
-    # prepare plot data for all dropdown options
-    plot_data = {}
-    for key in fig_tables:
-        plot_data[key] = {
-            'table': fig_tables[key].to_dict(),
-        }
-    # convert plot data to JSON-like structure
-    plot_data_json = json.dumps(plot_data)
 
     # Generate static table of HTML:
     # find significant genes w.r.t combined FDR
     ind_sig = df['FDR_min'] <= alp
     n_rows = max(n_rows_min, int(np.sum(ind_sig) * (1 + n_rows_buffer)))
     df_table = df.iloc[:n_rows].copy()
+
     # generate table figure
     df_table = format_cols(df_table)
     # making the significant rows bold
@@ -3441,104 +3266,5 @@ def generate_reports(
         if ind_sig[i]:
             df_table.loc[i, :] = '<b>' + df_table.loc[i, :].astype(str) + '</b>'
 
-    fig_table_static = go.Figure(data=[go.Table(
-        header=dict(values=['<b>' + col + '</b>' for col in df_table.columns],
-                    line_color='darkslategray',
-                    fill_color=headerColor,
-                    align=['left'] + ['center'] * (len(df_table.columns) - 1),
-                    font=dict(color='white', size=12)
-                    ),
-        cells=dict(values=[df_table[col].tolist() for col in df_table.columns],
-                   line_color='darkslategray',
-                   fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_table.shape[0])]],
-                   align=['left'] + ['center'] * (len(df_table.columns) - 1),
-                   font=dict(color='darkslategray', size=11),
-                   # format=['html'] * len(df_plot.columns)  # Enable HTML formatting
-                   )
-    )])
-
-    # # save static figure as HTML div
-    # table_static_html = fig_table_static.to_html(full_html=False, include_plotlyjs='cdn')
-
-    # # combine everything into the final HTML
-    # html_summary = html_summary.format(
-    #     methods_options=methods_options,
-    #     plot_data=plot_data_json,
-    #     table_static=table_static_html
-    # )
-    # # save to an HTML file
-    # summary_path_rel = ('' if (prefix_output is None) else prefix_output + '_') + 'merged_report_summary.html'
-    # summary_path = dir_output + '/' + summary_path_rel
-    # with open(summary_path, 'w') as f:
-    #     f.write(html_summary)
-
-    # html_main_report = f"""
-    #     <!DOCTYPE html>
-    #     <html lang="en">
-    #     <head>
-    #         <meta charset="UTF-8">
-    #         <meta name="viewport" content="width=device-width">
-    #         <title>Driver Discovery Suit Report</title>
-    #         <style>
-    #             .report-section {{
-    #                 display: none;
-    #             }}
-    #             .active {{
-    #                 display: block;
-    #             }}
-    #             .navbar {{
-    #                 overflow: hidden;
-    #                 background-color: #333;
-    #             }}
-    #             .navbar a {{
-    #                 float: left;
-    #                 display: block;
-    #                 color: #f2f2f2;
-    #                 text-align: center;
-    #                 padding: 14px 16px;
-    #                 text-decoration: none;
-    #             }}
-    #             .navbar a:hover {{
-    #                 background-color: #ddd;
-    #                 color: black;
-    #             }}
-    #             .navbar a.active-link {{
-    #                 background-color: white;
-    #                 color: black;
-    #             }}
-    #             iframe {{
-    #                 width: 100%;
-    #                 height: 1000px;
-    #                 border: none;
-    #             }}
-    #         </style>
-    #     </head>
-    #     <body>
-    #         <div class="navbar">
-    #             <a href="#" onclick="showReport('summary', '{summary_path_rel}')">Summary</a>
-    #             <a href="#" onclick="showReport('comparison', '{comparison_path_rel}')">Comparison</a>
-    #         </div>
-
-    #         <div id="summary" class="report-section active">
-    #             <iframe id="report-frame" src="{summary_path_rel}"></iframe>
-    #         </div>
-
-    #         <script>
-    #             function showReport(reportId, reportUrl) {{
-    #                 var iframe = document.getElementById('report-frame');
-    #                 iframe.src = reportUrl;
-
-    #                 var links = document.querySelectorAll('.navbar a');
-    #                 links.forEach(link => link.classList.remove('active-link'));
-
-    #                 var activeLink = document.querySelector(`.navbar a[onclick*="${{reportId}}"]`);
-    #                 activeLink.classList.add('active-link');
-    #             }}
-    #         </script>
-    #     </body>
-    #     </html>
-    #     """
-    # # save to an HTML file
-    # with open(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + f'merged_report_main.html',
-    #           'w') as f:
-    #     f.write(html_main_report)
+    # returns (go.Figure, [go.Figure(go.Table), go.Figure(go.Table), go.Figure(go.Table)])
+    return comparison_fig, fig_table

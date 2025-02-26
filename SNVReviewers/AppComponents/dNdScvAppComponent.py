@@ -15,7 +15,7 @@ from AnnoMate.Data import Data, DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
-from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX
+from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS
 
@@ -54,7 +54,8 @@ def gen_dNdScv_app_component_data_callback(
     dnd_df_plot = data.df[SNV_DATA_COLUMN_NAME][0][DND_PLOT_DATAFRAME_IDX]
     dnd_df_merged = data.df[SNV_DATA_COLUMN_NAME][0][DND_MERGED_DATAFRAME_IDX]
     dnd_df_global = data.df[SNV_DATA_COLUMN_NAME][0][DND_GLOBAL_DATAFRAME_IDX]
-
+    dnd_df_comparison = data.df[SNV_DATA_COLUMN_NAME][0][DND_COMPARISON_DATAFRAME_IDX]
+    
     if dnds_dropdown_value is None:
         dnds_dropdown_value = 'All'
 
@@ -73,12 +74,13 @@ def gen_dNdScv_app_component_data_callback(
     elif dnd_radio_item_selection == "Comparison":
 
         if dnds_dropdown_value not in comparison_dropdown_values:
-            dnds_dropdown_value = "MutSig2 vs dNdScv"
+            dnds_dropdown_value = "MutSig2CV vs dNdScv"
 
         all_page_content = gen_dndscv_comparison_app_component(
                 dnd_df_plot,
                 dnd_df_merged,
                 dnd_df_global,
+                dnd_df_comparison,
                 dnds_dropdown_value,
                 dnd_radio_item_selection
         )
@@ -92,6 +94,7 @@ def gen_dNdScv_app_component_data_callback(
                 dnd_df_plot,
                 dnd_df_merged,
                 dnd_df_global,
+                dnd_df_comparison,
                 dnds_dropdown_value,
                 dnd_radio_item_selection
         )
@@ -178,92 +181,104 @@ def gen_dNdScv_app_component_layout():
                 # displays first table for the dNdScv comparison report
                 html.Div(
                     children=[
-                        # html.H2('Comparison Tables'),
-                        dash_table.DataTable(
-                        id='dnds-comparison-table1',
-                        columns=[
-                            {"name": i,
-                                "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
-                        ],
-                        data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
-                            'records'),
-                        editable=False,
-                        filter_action="native",
-                        sort_action="native",
-                        sort_mode="multi",
-                        row_selectable="single",
-                        row_deletable=False,
-                        selected_columns=[],
-                        selected_rows=[0],
-                        page_action="native",
-                        page_current=0,
-                        page_size=5,
+                        dcc.Graph(id='dnds-comparison-table1',
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                )
+                        # # html.H2('Comparison Tables'),
+                        # dash_table.DataTable(
+                        # id='dnds-comparison-table1',
+                        # columns=[
+                        #     {"name": i,
+                        #         "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
+                        # ],
+                        # data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
+                        #     'records'),
+                        # editable=False,
+                        # filter_action="native",
+                        # sort_action="native",
+                        # sort_mode="multi",
+                        # row_selectable="single",
+                        # row_deletable=False,
+                        # selected_columns=[],
+                        # selected_rows=[0],
+                        # page_action="native",
+                        # page_current=0,
+                        # page_size=5,
                     
-                        # changing the width of the data table to 
-                        style_table={
-                            'display':"none"
-                            },
-                        ),
+                        # # changing the width of the data table to 
+                        # style_table={
+                        #     'display':"none"
+                        #     },
+                        # ),
                     ]
                 ),
                 html.Div(
                     children=[
-                        # html.H2('Comparison Tables'),
-                        dash_table.DataTable(
-                        id='dnds-comparison-table2',
-                        columns=[
-                            {"name": i,
-                                "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
-                        ],
-                        data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
-                            'records'),
-                        editable=False,
-                        filter_action="native",
-                        sort_action="native",
-                        sort_mode="multi",
-                        row_selectable="single",
-                        row_deletable=False,
-                        selected_columns=[],
-                        selected_rows=[0],
-                        page_action="native",
-                        page_current=0,
-                        page_size=5,
+                        dcc.Graph(id='dnds-comparison-table2',
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                )
+                        # # html.H2('Comparison Tables'),
+                        # dash_table.DataTable(
+                        # id='dnds-comparison-table2',
+                        # columns=[
+                        #     {"name": i,
+                        #         "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
+                        # ],
+                        # data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
+                        #     'records'),
+                        # editable=False,
+                        # filter_action="native",
+                        # sort_action="native",
+                        # sort_mode="multi",
+                        # row_selectable="single",
+                        # row_deletable=False,
+                        # selected_columns=[],
+                        # selected_rows=[0],
+                        # page_action="native",
+                        # page_current=0,
+                        # page_size=5,
                     
-                        # changing the width of the data table to 
-                        style_table={
-                            'display':"none"
-                            },
-                        ),
+                        # # changing the width of the data table to 
+                        # style_table={
+                        #     'display':"none"
+                        #     },
+                        # ),
                     ]
                 ),
                 html.Div(
                     children=[
-                        # html.H2('Comparison Tables'),
-                        dash_table.DataTable(
-                        id='dnds-comparison-table3',
-                        columns=[
-                            {"name": i,
-                                "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
-                        ],
-                        data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
-                            'records'),
-                        editable=False,
-                        filter_action="native",
-                        sort_action="native",
-                        sort_mode="multi",
-                        row_selectable="single",
-                        row_deletable=False,
-                        selected_columns=[],
-                        selected_rows=[0],
-                        page_action="native",
-                        page_current=0,
-                        page_size=5,
+                        dcc.Graph(id='dnds-comparison-table3',
+                                  figure={},
+                                  style={"display":"none"} # hides the plot
+                                )
+                        # #html.H2('Comparison Tables'),
+                        # dash_table.DataTable(
+                        # id='dnds-comparison-table3',
+                        # columns=[
+                        #     {"name": i,
+                        #         "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
+                        # ],
+                        # data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
+                        #     'records'),
+                        # editable=False,
+                        # filter_action="native",
+                        # sort_action="native",
+                        # sort_mode="multi",
+                        # row_selectable="single",
+                        # row_deletable=False,
+                        # selected_columns=[],
+                        # selected_rows=[0],
+                        # page_action="native",
+                        # page_current=0,
+                        # page_size=5,
                     
-                        # changing the width of the data table to 
-                        style_table={
-                            'display':"none"
-                            },
-                        ),
+                        # # changing the width of the data table to 
+                        # style_table={
+                        #     'display':"none"
+                        #     },
+                        # ),
                     ]
                 ),
                 # displays a table for the dig report
@@ -377,9 +392,9 @@ def gen_dnd_scv_app_component():
         callback_output=[
             # dNdScv tables
             Output('dnds-report-table', 'data'),
-            Output('dnds-comparison-table1', 'data'),
-            Output('dnds-comparison-table2', 'data'),
-            Output('dnds-comparison-table3', 'data'),
+            Output('dnds-comparison-table1', 'figure'),
+            Output('dnds-comparison-table2', 'figure'),
+            Output('dnds-comparison-table3', 'figure'),
             Output('dnds-summary-table', 'data'),
 
 
@@ -399,9 +414,9 @@ def gen_dnd_scv_app_component():
 
             # dNdScv table display
             Output('dnds-report-table', 'style_table'),
-            Output('dnds-comparison-table1', 'style_table'),
-            Output('dnds-comparison-table2', 'style_table'),
-            Output('dnds-comparison-table3', 'style_table'),
+            Output('dnds-comparison-table1', 'style'),
+            Output('dnds-comparison-table2', 'style'),
+            Output('dnds-comparison-table3', 'style'),
             Output('dnds-summary-table', 'style_table'),
 
             Output('dnds-special-text-output', 'children'),

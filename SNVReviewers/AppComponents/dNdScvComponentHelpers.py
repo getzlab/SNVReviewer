@@ -34,11 +34,13 @@ RESULTS_DROPDOWN_OPTIONS = [
     {'label': 'First 10', 'value': 'First 10'},
     {'label': 'None', 'value': 'None'}
 ]
+
 COMPARISON_DROPDOWN_OPTIONS = [
     {'label': "MutSig2 vs dNdScv", 'value':'MutSig2CV vs dNdScv'}, 
     {'label': "MutSig2 vs DIG", 'value':"MutSig2CV vs DIG"}, 
     {'label': "dNdScv vs DIG", 'value':"dNdScv vs DIG"}
 ]
+
 SUMMARY_DROPDOWN_OPTIONS = [
     {'label': "MutSig2, dNdScv, and DIG", 'value':"MutSig2, dNdScv, and DIG"}, 
     {'label': "MutSig2 and dNdScv only", 'value':"MutSig2 and dNdScv only"}, 
@@ -73,7 +75,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 import json
-from SNVReviewers.AppComponents.utils import generate_dnds_report
+from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot
 
 def gen_dndscv_results_app_component(
     dnd_df_plot,
@@ -90,6 +92,7 @@ def gen_dndscv_results_app_component(
     dnd_df_merged = dnd_df_merged.copy()
     dnd_df_global = dnd_df_global.copy()
     table = pd.DataFrame().to_dict('records')
+    fig_table = go.Figure()
     # table3 = pd.DataFrame().to_dict('records')
 
 
@@ -102,9 +105,9 @@ def gen_dndscv_results_app_component(
     # NEED TO REFORMAT THE dnd_df_plot dataframe for 2 point decimal precision
     all_page_content = [
             dnd_df_plot.to_dict('records'),
-            table,
-            table,
-            table,
+            fig_table,
+            fig_table,
+            fig_table,
             table, 
 
             # dndscv report figures
@@ -145,6 +148,7 @@ def gen_dndscv_comparison_app_component(
     dnd_df_plot,
     dnd_df_merged,
     dnd_df_global,
+    dnd_df_comparison,
     dropdown_menu_value,
     dnd_radio_item_selection           
 ):
@@ -158,16 +162,18 @@ def gen_dndscv_comparison_app_component(
     figure4 = go.Figure()
     comparison_fig = go.Figure()
     table1 = pd.DataFrame().to_dict('records')
-    table2 = pd.DataFrame().to_dict('records')
-    table3 = pd.DataFrame().to_dict('records')
-    table4 = pd.DataFrame().to_dict('records')
+    # table2 = pd.DataFrame().to_dict('records')
+    # table3 = pd.DataFrame().to_dict('records')
+    # table4 = pd.DataFrame().to_dict('records')
     table5 = pd.DataFrame().to_dict('records')
+
+    comparison_fig, [comaprison_table1, comaprison_table2, comaprison_table3] = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
 
     all_page_content = [
         table1,
-        table2,
-        table3,
-        table4,
+        comaprison_table1,
+        comaprison_table2,
+        comaprison_table3,
         table5,
 
         figure1,
@@ -201,6 +207,7 @@ def gen_dndscv_summary_app_component(
     dnd_df_plot,
     dnd_df_merged,
     dnd_df_global,
+    dnd_df_comparison,
     dropdown_menu_value,
     dnd_radio_item_selection       
 ):
@@ -213,19 +220,23 @@ def gen_dndscv_summary_app_component(
     figure3 = go.Figure()
     figure4 = go.Figure()
     figure5 = go.Figure()
+    
     summary_table1 = dnd_df_plot.to_dict('records')
-    table2 = pd.DataFrame().to_dict('records')
-    table3 = pd.DataFrame().to_dict('records')
-    table4 = pd.DataFrame().to_dict('records')
-    table5 = dnd_df_merged.to_dict('records'),
+    summary_table2 = pd.DataFrame().to_dict('records')
+
+    # FINISH THIS LATER!!!
+    # summary_table2 = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
+    comparison_table = go.Figure()
+
+    # table5 = dnd_df_merged.to_dict('records'),
 
     all_page_content = [
         # tables to display for the summary dNdScv report
         summary_table1,
-        table2,
-        table3,
-        table4,
-        table5,
+        comparison_table,
+        comparison_table,
+        comparison_table,
+        summary_table2,
 
         # no figures to display for the summary dNdScv report
         figure1,
