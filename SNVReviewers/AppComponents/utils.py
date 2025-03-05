@@ -3040,14 +3040,23 @@ def plot_table_comparison(df, sig_genes_dict):
         df_plot = df.loc[df.GENE.isin(sig_genes_dict[key])].copy().sort_values('RANK')
         df_plot = df_plot[['GENE', 'RANK', 'CHROM', 'SIZE_coding'] + [c for c in df_plot.columns if len([m for m in methods if m in c]) > 0] + ['CGC', 'PANCAN']]
         method_other = [m for m in methods if m not in key]
+
         if len(method_other) > 0:
+            # makes sure every element in gene column is a string
+            df_plot['GENE'] = df_plot['GENE'].astype(str)
 
             print("Inside the plot_table_comparison function")
             table_annot = df_plot['SIG_' + method_other[0]].isna().sum() > 0
+
+            # DEBUGGING STARTED
             # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] += '*', # original
             print("this is what the df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] looks like")
             print(df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'])
-        
+            print("type of this line of code: df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] => ")
+            # print(type(df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE']))
+            print(any([isinstance(ele, (int, float)) for ele in df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE']]))
+            # DEBUGGING ENDED
+
             df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] + "*"
             # replaces the nan values with *
             # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = '*' # modified version
@@ -3231,7 +3240,7 @@ def generate_dnds_comparison_dataframe(
 ):
     # Load and Format Output Files of Statistical Methods
     # collect and process results from different statistical methods
-    df = preprocess_results(path_mutsig, path_dndscv, path_dig, path_dig_coding=path_dig_coding,alp=alp)
+    df = preprocess_results(path_mutsig, path_dndscv, path_dig, path_dig_coding=path_dig_coding, alp=alp)
 
     return df
 
