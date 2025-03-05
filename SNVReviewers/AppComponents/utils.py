@@ -1946,11 +1946,12 @@ dnds_markers = {
 }
 
 ngenes = {
-    'All': 'all',
+    'all': 'all',
     'First 30': 30,
     'First 20': 20,
     'First 10': 10,
-    'None': None
+    # display zero annotations of the significant genes
+    'None': 0 # None
 }
 
 # derived parameters
@@ -3040,8 +3041,16 @@ def plot_table_comparison(df, sig_genes_dict):
         df_plot = df_plot[['GENE', 'RANK', 'CHROM', 'SIZE_coding'] + [c for c in df_plot.columns if len([m for m in methods if m in c]) > 0] + ['CGC', 'PANCAN']]
         method_other = [m for m in methods if m not in key]
         if len(method_other) > 0:
+
+            print("Inside the plot_table_comparison function")
             table_annot = df_plot['SIG_' + method_other[0]].isna().sum() > 0
-            df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] += '*'
+            # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] += '*', # original
+            print("this is what the df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] looks like")
+            print(df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'])
+        
+            df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] + "*"
+            # replaces the nan values with *
+            # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = '*' # modified version
         else:
             table_annot = False
         # formatting data in columns
@@ -3138,19 +3147,22 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
     # ADDED THIS LINE IN!!
     # all_titles.append(title_short)
     # MutSig2, dNdScv, and DIG
-    []
-
-    is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
+    print("this is what title_short looks like!!: ", title_short)
+    print("this is what split title_short looks like: ", title_short.split(","))
+    # need to look at each component from title_short
+    is_sig = np.all(df[['SIG_' + m for m in title_short]] == True, axis=1)
+    
     if title_short == "MutSig2, dNdScv, and DIG":
         is_keep = is_sig
         other_methods = []
     else:
-        other_methods = np.setdiff1d(subsets[0], s).tolist()
+        other_methods = np.setdiff1d(subsets[0], title_short).tolist()
         is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
         is_keep = np.logical_and(is_sig, is_notsig)
     dfi = df.loc[is_keep].copy()
     if len(other_methods) > 0:
         table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
+        # BE CAREFUL THAT THE COMPARISON BUG DOESN'T HAPPEN HERE TOO!!
         dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
     else:
         table_annot = False

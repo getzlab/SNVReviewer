@@ -6,6 +6,7 @@ from rpy2.robjects import pandas2ri
 
 from SNVReviewers.AppComponents.DIGAppComponent import gen_dig_report_app_component
 from SNVReviewers.AppComponents.dNdScvAppComponent import gen_dnd_scv_app_component
+from SNVReviewers.AppComponents.MutSigAppComponent import gen_mutsig_app_component
 
 from AnnoMate.Data import DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp
@@ -64,6 +65,10 @@ class SNVReviewer(ReviewerTemplate):
 
         app.add_component(
             gen_dnd_scv_app_component()
+        )
+
+        app.add_component(
+            gen_mutsig_app_component()
         )
 
         return app

@@ -17,16 +17,12 @@ from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
 from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS, DNDSCV_REPORT_COLUMN_NAMES
 
 import pandas as pd
 import numpy as np
 
 DNDSCV_REPORT_VALUES = ["Results", "Comparison", "Summary"]
-
-DNDSCV_REPORT_COLUMN_NAMES = ["RANK", "GENE", "N_SYN", "N_MIS", "N_NON", "N_SPL", "N_IND",
-                              "dNdS_MIS", "dNdS_NON", "dNdS_SPL", "dNdS_IND", "PVAL_MIS",
-                              "PVAL_TRUNC", "PVAL_IND", "PVAL", "FDR", "CGC", "PANCAN"]
 
 def gen_dNdScv_app_component_data_callback(
     data: GenericData,
@@ -57,11 +53,11 @@ def gen_dNdScv_app_component_data_callback(
     dnd_df_comparison = data.df[SNV_DATA_COLUMN_NAME][0][DND_COMPARISON_DATAFRAME_IDX]
     
     if dnds_dropdown_value is None:
-        dnds_dropdown_value = 'All'
+        dnds_dropdown_value = 'all'
 
     if dnd_radio_item_selection == "Results":
         if dnds_dropdown_value not in results_dropdown_values:
-            dnds_dropdown_value = 'All'
+            dnds_dropdown_value = 'all'
 
         all_page_content = gen_dndscv_results_app_component(
                 dnd_df_plot,
@@ -426,6 +422,8 @@ def gen_dnd_scv_app_component():
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),
             Output('dnds-dropdowm-label', 'children'),
+
+            Output('dnds-gene-dropdown', 'value'),
 
             Output('dnds-debugging', 'children'),
         ],
