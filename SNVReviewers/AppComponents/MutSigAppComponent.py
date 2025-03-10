@@ -31,8 +31,9 @@ def gen_mutsig_app_component_data_callback(
 ):
     all_page_content = []
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
+    mustsig_dropwdown_values = [option["value"] for option in RESULTS_DROPDOWN_OPTIONS]
 
-    if mutsig_dropdown_value is None:
+    if mutsig_dropdown_value not in mustsig_dropwdown_values:
         mutsig_dropdown_value = "all"
 
     all_page_content = gen_mutsig_results_app_component(mutsig_df, mutsig_dropdown_value)

@@ -4,15 +4,15 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-from SNVReviewers.AppComponents.utils import reformat_numbers
+from SNVReviewers.AppComponents.utils import reformat_numbers, gen_mutsig_report
 
-MUTSIG_REPORT_COLUMN_NAMES = ["rank", "gene", "nnei", "nncd", "nsil", "nmis", "nstp", "nspl", "nind",
-                              "nnon", "npat", "pCV", "pCL", "pFN", "pCL2", "pFN2", "p", 
+# MUTSIG_REPORT_COLUMN_NAMES = ["rank", "gene", "nnei", "nncd", "nsil", "nmis", "nstp", "nspl", "nind",
+#                               "nnon", "npat", "pCV", "pCL", "pFN", "pCL2", "pFN2", "p", 
+#                             ]
+MUTSIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "NNEI", "NNCD", "NSIL", "NMIS", "NSTP", "NSPL", "NIND",
+                              "NNON", "NPAT", "PCV", "PCL", "PFN", "PCL2", "PFN2", "P", 
+                              "FDR", "CGC", "PANCAN"
                             ]
-                            # ["RANK", "GENE", "NNEI", "NNCD", "NSIL", "NMIS", "NSTP", "NSPL", "NIND",
-                            #   "NNON", "NPAT", "PCV", "PCL", "PFN", "PCL2", "PFN2", "P", 
-                            # #   "FDR", "CGC", "PANCAN"
-                            # ]
 
 def gen_mutsig_results_app_component(
     df_mutsig,
@@ -26,10 +26,10 @@ def gen_mutsig_results_app_component(
     results_table = go.Figure()
     qq_fig = go.Figure()
 
-    # df_mutsig = df_mutsig.sort_values(by='fdr')
-    df_mutsig['rank'] = np.array([i+1 for i in range(len(df_mutsig))])
+    qq_fig, df_plot = gen_mutsig_report(df_mutsig, num_gene_values)
 
-    # qq_fig, df_plot = generate_mutsig_report(mutsig_df_plot, num_gene_values)
+    for clm in df_plot:
+        debugging = debugging + "/" + clm
 
     for clm_nm in MUTSIG_REPORT_COLUMN_NAMES:
         

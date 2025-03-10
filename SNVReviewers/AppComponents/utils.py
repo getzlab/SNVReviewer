@@ -2220,11 +2220,6 @@ def generate_dnds_report(
 
     cols_kept = (['RANK', 'GENE'] + list(dict_n.values()) + list(dict_w.values()) + list(dict_pvals.values()) +
                  ['PVAL', 'FDR', 'CGC', 'PANCAN'])
-    # cols_kept = (['RANK', 'GENE'] + list(dict_n.values()) + list(dict_w.values()) + ['PVAL', 'FDR', 'CGC', 'PANCAN'])
-
-    # # generate the dropdown options
-    # ngenes_options = "\n".join([f'<option value="{key}">{key}</option>' for key in ngenes.keys()])
-
 
     # 'coding': ["Coding", "circle"],
     # 'promoter': ["Promoter", "square"],
@@ -2232,9 +2227,6 @@ def generate_dnds_report(
     # '3utr': ["3\' UTR", "triangle-down"]
 
     tests_pvals = ['p' + mut_typ + '_cv' for mut_typ in dnds_markers.keys()]
-    # tests_pvals = [mut_typ + '_cv' for mut_typ in markers.keys()]
-    # mutations = ['mis',	'trunc', 'allsubs',	'ind'] # looked at the dnds_out.tsv file to find the mutation types
-    # tests_pvals = ["p" + mut_type + "_cv" for mut_type in mutations]
 
     # prepare plot data for all dropdown options
     plot_data = {}
@@ -3272,22 +3264,6 @@ def gen_dnds_comparison_plot(
         
         # tables = [table.to_dict('records') for table in fig_table]
 
-
-    # # Genrate dynamic table of HTML:
-    # fig_tables = gen_dnds_summary_table(df)
-    
-    # # generate the dropdown options
-    # methods_options = "\n".join([f'<option value="{key}">{key}</option>' for key in fig_tables.keys()])
-
-    # # prepare plot data for all dropdown options
-    # plot_data = {}
-    # for key in fig_tables:
-    #     plot_data[key] = {
-    #         'table': fig_tables[key].to_dict(),
-    #     }
-    # # convert plot data to JSON-like structure
-    # plot_data_json = json.dumps(plot_data)
-
     # Generate static table of HTML:
     # find significant genes w.r.t combined FDR
     ind_sig = df['FDR_min'] <= alp
@@ -3303,3 +3279,295 @@ def gen_dnds_comparison_plot(
 
     # returns (go.Figure, [go.Figure(go.Table), go.Figure(go.Table), go.Figure(go.Table)])
     return comparison_fig, fig_table
+
+
+# MUTSIG CODE
+mutsig_markers = {
+    'PCV': "circle",
+    'PCL': "square",
+    'PFN': "star",
+    'PCL2': "triangle-down",
+    'PFN2': "x",
+    'PCF': "cross"
+}
+msize = 7.5
+
+def get_capped_mutsig_labels(x_capped, y_capped, labels_capped):
+    labels_capped = [(
+        f"({x_capped[i]:.2f}, {y_capped[i]:.2f})<br>{l}")
+        for i, l in enumerate(labels_capped)]
+    return np.array(labels_capped)
+
+def plot_mutsig_qq(x, y, labels, col, opac, mark, name, fig, hi='x+y+text+name'):
+    fig.add_trace(
+        go.Scatter(
+            x=x.tolist(),
+            y=y.tolist(),
+            mode='markers',
+            marker=dict(color=col, opacity=opac, symbol=mark, size=msize),
+            text=labels.tolist(),
+            name=name,
+            hoverinfo=hi,
+            showlegend=False,
+            xhoverformat='.2f',
+            yhoverformat='.2f'
+        )
+    )
+    return fig
+
+def generate_mutsig_dataframe(
+        path_sig_genes,        
+):
+    """
+    Generate an HTML report for MutSig2CV results.
+    :param path_sig_genes: Path to the MutSig2CV output file.
+    :param path_cgc_list: Path to the list of CGC genes.
+    :param path_pancan_list: Path to the list of PanCanAtlas genes.
+    :param dir_output: Output directory.
+    :param prefix_output: Prefix for the output file.
+    :param alp: Significance level (default: 0.1).
+    :param alp_nearsig: Near-significance threshold (default: 0.25).
+    :return:
+    """
+    # Driver gene lists
+    path_cgc_list = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
+    path_pancan_list = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
+
+    # lists of known driver genes
+    cgc_list = pd.read_csv(path_cgc_list, sep='\t').to_numpy().flatten()
+    pancan_list = pd.read_csv(path_pancan_list, sep='\t').to_numpy().flatten()
+    # read MutSig2CV output
+    df_sg = pd.read_csv(path_sig_genes, sep='\t')
+    # adding indicator of genes being part of the CGC or PanCan list
+    df_sg['CGC'] = df_sg.gene.isin(cgc_list)
+    df_sg['PANCAN'] = df_sg.gene.isin(pancan_list)
+
+    # # drop columns that are not needed for the report
+    df_sg = df_sg[df_sg.columns[~df_sg.columns.isin(['longname', 'codelen'])]]
+    
+    
+    # rename columns
+    df_sg = df_sg.rename(columns={'q': 'FDR'})
+    # df_sg.columns = df_sg.columns.str.upper()
+    df_sg = df_sg.rename(columns={clm:clm.upper() for clm in list(df_sg.columns)})
+    print("checking if pCF column is df_sg: ", "pCF" in df_sg)
+    print("checking if PCF column is df_sg: ", "PCF" in df_sg)
+
+    # drop tests that resulted in NaN values for all genes
+    tests = np.array(['PCV', 'PCL', 'PFN', 'PCL2', 'PFN2']) #, 'PCF'])
+    is_dropped = np.all(df_sg[tests].isna(), axis=0)
+    tests_drop = np.array(tests)[is_dropped].tolist()
+    tests_kept = np.array(tests)[~is_dropped].tolist()
+    df_sg = df_sg[df_sg.columns[~df_sg.columns.isin(tests_drop)]]
+
+    # sort genes and add rank
+    df_sg = df_sg.sort_values(['FDR', 'P'])
+    df_sg['RANK'] = [i for i in range(1, df_sg.shape[0] + 1)]
+
+    return df_sg
+
+def gen_mutsig_report(
+    df_sg,
+    ngenes_key,
+    alp=0.1,
+    alp_nearsig=0.25
+):
+    """
+    
+    """
+    tests = np.array(['PCV', 'PCL', 'PFN', 'PCL2', 'PFN2']) #, 'PCF'])
+    is_dropped = np.all(df_sg[tests].isna(), axis=0)
+    tests_drop = np.array(tests)[is_dropped].tolist()
+    tests_kept = np.array(tests)[~is_dropped].tolist()
+    df_sg = df_sg[df_sg.columns[~df_sg.columns.isin(tests_drop)]]
+
+    # prepare plot data for all combinations of mut_type and burden_type dropdown options
+    plot_data = {}
+    ngenes_val = ngenes[ngenes_key]
+    # for ngenes_key, ngenes_val in ngenes.items():
+
+    # Q-Q Plot
+    # Scatter plots
+    labels = df_sg.GENE.copy().to_numpy()
+    pvals = df_sg.P.copy().to_numpy()
+    x = -np.log10(np.arange(1, len(pvals) + 1) / (len(pvals) + 1))
+    y = -np.log10(pvals)
+    logfdr = -np.log10(df_sg.FDR.copy().to_numpy())
+    # indicator of "dominant" test (with minimal FDR) for each gene
+    test_dom = df_sg[tests_kept].idxmin(axis=1).to_numpy()
+    # indicator of genes whose p-value exceeds the maximum value
+    ind_capped = y > pval_max
+    # indicator of significant genes
+    ind_sig = logfdr >= -np.log10(alp)
+    # indicator of significant or near-significant genes
+    ind_hits = logfdr >= -np.log10(alp_nearsig)
+    # indicator of near-significant genes
+    ind_nearsig = np.logical_and(~ind_sig, ind_hits)
+    # indicator of non-significant genes
+    ind_nsig = ~ind_hits
+    # indicator of hits that are not capped
+    ind_ncapped = np.logical_and(ind_sig, ~ind_capped)
+    # indicator of hits that are not capped
+    ind_ncapped_hits = np.logical_and(ind_hits, ~ind_capped)
+    ylim_upper = min(np.max(y), pval_max) * (1 + hor_buffer)
+
+    # Scatter plot
+    qq_fig = go.Figure()
+
+    for i in range(len(tests_kept)):
+        ind = test_dom == tests_kept[i]
+
+        i_nsig = np.logical_and(ind, ind_nsig)
+        i_nearsig = np.logical_and(ind, ind_nearsig)
+        i_ncapped = np.logical_and(ind, ind_ncapped)
+        i_capped = np.logical_and(ind, ind_capped)
+       
+        qq_fig = plot_mutsig_qq(x=x[i_nsig], y=y[i_nsig], labels=labels[i_nsig], col=col_nonsig, opac=opac_nonsig, 
+                        mark=mutsig_markers[tests_kept[i]], name='Non-significant', fig=qq_fig)
+        qq_fig = plot_mutsig_qq(x=x[i_nearsig], y=y[i_nearsig], labels=labels[i_nearsig], col=col_nearsig, opac=opac_nearsig, 
+                         mark=mutsig_markers[tests_kept[i]], name='Near-significance', fig=qq_fig)
+        qq_fig = plot_mutsig_qq(x=x[i_ncapped], y=y[i_ncapped], labels=labels[i_ncapped], col=col_sig, opac=opac_sig, 
+                        mark=mutsig_markers[tests_kept[i]], name='Significant', fig=qq_fig)
+
+        xi_capped = x[i_capped]
+        qq_fig = plot_mutsig_qq(x=xi_capped, y=np.array([pval_max] * sum(i_capped)),
+                            labels=get_capped_mutsig_labels(xi_capped, y[i_capped], labels[i_capped]), 
+                            col=col_sig, opac=opac_sig, mark=mutsig_markers[tests_kept[i]], 
+                            name='Significant', fig=qq_fig, hi='name+text')
+
+    # Dummy points for legend
+    tests_dom, test_counts = np.unique(test_dom, return_counts=True)
+    for test_i in tests_dom[np.argsort(test_counts)[::-1]]:
+        qq_fig.add_trace(
+            go.Scatter(
+                y=[None],
+                mode='markers',
+                marker=dict(
+                    color = 'white',
+                    symbol=mutsig_markers[test_i],
+                    size=msize * 1.25,
+                    line=dict(color='black', width=2)
+                ),
+                name=test_i
+            )
+        )
+
+    # Add rotated text labels as annotations
+    x_capped = x[ind_capped]
+    y_capped = y[ind_capped]
+    labels_capped = get_capped_labels(x_capped, y_capped, labels[ind_capped])
+
+    if ngenes_val is not None:
+        if ngenes_val == 'all':
+            x_annot = [x_capped, x[ind_ncapped_hits]]
+            y_annot = [[pval_max] * sum(ind_capped), y[ind_ncapped_hits]]
+            labels_annot = [labels_capped, labels[ind_ncapped_hits]]
+        else:
+            if ngenes_val <= len(x_capped):
+                x_annot = [x_capped[:ngenes_val], []]
+                y_annot = [[pval_max] * ngenes_val, []]
+                labels_annot = [labels_capped[:ngenes_val], []]
+            else:
+                end_ncapped = ngenes_val - len(x_capped)
+                x_annot = [x_capped, x[ind_ncapped_hits][:end_ncapped]]
+                y_annot = [[pval_max] * sum(ind_capped), y[ind_ncapped_hits][:end_ncapped]]
+                labels_annot = [labels_capped, labels[ind_ncapped_hits][:end_ncapped]]
+        count = 0
+        for (xa, ya, laba) in zip(x_annot, y_annot, labels_annot):
+            for (xi, yi, label) in zip(xa, ya, laba):
+                if ind_nearsig[count]:
+                    coli = col_nearsig
+                else:
+                    coli = col_sig
+                qq_fig.add_annotation(
+                    x=xi,
+                    y=yi - ylim_upper * y_gap_annot,
+                    text=label.split('<br>')[-1],
+                    showarrow=False,
+                    font=dict(color=coli),
+                    textangle=-90,
+                    xanchor="center",
+                    yanchor="top"
+                )
+                count += 1
+
+    # Line plots
+    qq_fig.add_trace(
+        go.Scatter(
+            x=[0, np.max(x) * (1 + hor_buffer)],
+            y=[0, np.max(x) * (1 + hor_buffer)],
+            mode='lines',
+            line=dict(dash=typ_thick, color=col_thick, width=thk_thick),
+            showlegend=False,
+            hoverinfo='skip'
+        )
+    )
+    qq_fig.add_trace(
+        go.Scatter(
+            x=[0, np.max(x) * (1 + hor_buffer)],
+            y=[pval_max] * 2,
+            mode='lines',
+            line=dict(dash=typ_thin, color=col_thin, width=thk_thin),
+            showlegend=False,
+            hoverinfo='skip'
+        )
+    )
+    # Figure formatting
+    qq_fig.update_layout(
+        title='QQ-Plot of P-values:',
+        xaxis_title='Expected -Log10(P-value)',
+        yaxis_title='Observed -Log10(P-value)',
+        xaxis=dict(range=[0, np.max(x) * (1 + hor_buffer)]),
+        yaxis=dict(range=[0, ylim_upper]),
+        template='plotly_white',
+        legend=dict(
+            title=dict(
+                text="Dominant Test:",
+            ),
+            indentation=10
+        )
+    )
+    # Save figures as separate data
+    plot_data[f"{ngenes_key}"] = {
+        'qq': qq_fig.to_dict()
+    }
+
+    # Table Plot
+    cols_kept = ['RANK', 'GENE', 'NNEI', 'NNCD', 'NSIL', 'NMIS', 'NSTP', 'NSPL', 'NIND', 'NNON', 'NPAT', 'NSITE',] + tests_kept + ['P', 'FDR', 'CGC', 'PANCAN']
+    n_rows = max(n_rows_min, int(np.sum(ind_sig) * (1 + n_rows_buffer)))
+    df_plot = df_sg.iloc[:n_rows][cols_kept].copy()
+
+    for col in  tests_kept + ['P', 'FDR']:
+        df_plot[col] = reformat_numbers(df_plot[col].to_numpy())
+    for c in ['RANK', 'NNEI', 'NNCD', 'NSIL', 'NMIS', 'NSTP', 'NSPL', 'NIND', 'NNON', 'NPAT', 'NSITE']:
+        df_plot[c] = df_plot[c].astype(int)
+
+    # Generate table figure
+    headerColor = 'grey'
+    rowEvenColor = 'lightgrey'
+    rowOddColor = 'white'
+
+    # Making the significant rows bold
+    df_plot = df_plot.astype(str)
+
+    for i in range(df_plot.shape[0]):
+        if ind_sig[i]:
+            df_plot.loc[i, :] = '<b>' + df_plot.loc[i, :].astype(str) + '</b>'
+
+    fig_table = go.Figure(data=[go.Table(
+        header=dict(values=['<b>' + col + '</b>' for col in df_plot.columns],
+                    line_color='darkslategray',
+                    fill_color=headerColor,
+                    align=['left'] + ['center'] * (len(df_plot.columns) - 1),
+                    font=dict(color='white', size=12)
+                    ),
+        cells=dict(values=[df_plot[col].tolist() for col in df_plot.columns],
+                   line_color='darkslategray',
+                   fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_plot.shape[0])]],
+                   align=['left'] + ['center'] * (len(df_plot.columns) - 1),
+                   font=dict(color='darkslategray', size=11),
+                   )
+    )
+    ])
+
+    return qq_fig, df_sg
