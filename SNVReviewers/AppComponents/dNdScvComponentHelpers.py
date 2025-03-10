@@ -38,17 +38,17 @@ RESULTS_DROPDOWN_OPTIONS = [
 ]
 
 COMPARISON_DROPDOWN_OPTIONS = [
-    {'label': "MutSig2 vs dNdScv", 'value':'MutSig2CV vs dNdScv'}, 
-    {'label': "MutSig2 vs DIG", 'value':"MutSig2CV vs DIG"}, 
+    {'label': "MutSig2CV vs dNdScv", 'value':'MutSig2CV vs dNdScv'}, 
+    {'label': "MutSig2CV vs DIG", 'value':"MutSig2CV vs DIG"}, 
     {'label': "dNdScv vs DIG", 'value':"dNdScv vs DIG"}
 ]
 
 SUMMARY_DROPDOWN_OPTIONS = [
-    {'label': "MutSig2, dNdScv, and DIG", 'value':"MutSig2CV, dNdScv, and DIG"}, 
-    {'label': "MutSig2 and dNdScv only", 'value':"MutSig2CV and dNdScv only"}, 
-    {'label': "MutSig2 and DIG only", 'value':"MutSig2CV and DIG only"},
+    {'label': "MutSig2CV, dNdScv and DIG", 'value':"MutSig2CV, dNdScv and DIG"}, 
+    {'label': "MutSig2CV and dNdScv only", 'value':"MutSig2CV and dNdScv only"}, 
+    {'label': "MutSig2CV and DIG only", 'value':"MutSig2CV and DIG only"},
     {'label': "dNdScv and DIG only", 'value':"dNdScv and DIG only"}, 
-    {'label': "MutSig2 only", 'value':"MutSig2CV only"}, 
+    {'label': "MutSig2CV only", 'value':"MutSig2CV only"}, 
     {'label': "dNdScv only", 'value':"dNdScv only"}, 
     {'label': "DIG only", 'value':"DIG only"}
 ]
@@ -103,9 +103,6 @@ def gen_dndscv_results_app_component(
     dnd_df_global = dnd_df_global.copy()
     summary_table = go.Figure()
     comparison_table = go.Figure()
-
-    # for clm in dnd_df_plot:
-    #     debugging = debugging + " " + clm
 
     qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
 
@@ -235,28 +232,12 @@ def gen_dndscv_summary_app_component(
     
     summary_table1 = pd.DataFrame().to_dict('records')
 
-    # FINISH THIS LATER!!!
-    print("before I try to generate dnds summary table!!")
-    # summary_table_dict, all_titles = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
-    # summary_table2 = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
-
     summary_tables, all_titles = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
 
-    for title in all_titles:
-        debugging = debugging +"/" + title
-    summary_table_combined = go.Figure()
-    # summary_table_combined = summary_tables["MutSig2CV, dNdScv, and DIG"]
+    summary_table_combined = summary_tables["MutSig2CV, dNdScv and DIG"]
     print("this is dropdown_menu_value: ", dropdown_menu_value)
-    # print("these are the keys in the summary table dict: ", list(summary_table_dict.keys()))
-    if dropdown_menu_value != "MutSig2CV, dNdScv, and DIG":
-
-        summary_table2 = summary_tables[dropdown_menu_value]
-    else:
-        summary_table2 = summary_tables["dNdScv and DIG only"]
-
+    summary_table2 = summary_tables[dropdown_menu_value]
     comparison_table = go.Figure()
-
-    # table5 = dnd_df_merged.to_dict('records'),
 
     all_page_content = [
         # tables to display for the summary dNdScv report

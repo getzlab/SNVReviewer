@@ -84,7 +84,7 @@ def gen_dNdScv_app_component_data_callback(
     elif dnd_radio_item_selection == "Summary":
 
         if dnds_dropdown_value not in summary_dropdown_values:
-            dnds_dropdown_value = "MutSig2CV, dNdScv, and DIG"
+            dnds_dropdown_value = "MutSig2CV, dNdScv and DIG"
 
         all_page_content = gen_dndscv_summary_app_component(
                 dnd_df_plot,

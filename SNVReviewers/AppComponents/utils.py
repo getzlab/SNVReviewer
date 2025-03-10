@@ -3150,13 +3150,30 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
         all_titles.append(title_short)
 
         is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
+        print("INSIDE gen_dnds_summary_table function")
+        print("is significant: ", is_sig)
+
         if i == 0:
             is_keep = is_sig
             other_methods = []
-        else:
+
+        elif dropdown_menu_value == "MutSig2CV, dNdScv and DIG":
             other_methods = np.setdiff1d(subsets[0], s).tolist()
             is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
             is_keep = np.logical_and(is_sig, is_notsig)
+
+        # elif dropdown_menu_value == "MutSig2CV and DIG only":
+        #     other_methods = ["MutSig2CV", "DIG"]
+        #     # indices where the data is both mutsig2cv and dig
+        #     is_keep = np.where((df['SIG_DIG'] == True) and (df['SIG_MutSig2CV'] == True))[0]
+
+        else:
+            dropdown_menu_value_methods = dropdown_menu_value.replace(" and", "").replace(" only", "")
+            other_methods = dropdown_menu_value_methods.split(" ")
+
+            # keeps only the rows that contain True values for the two methods being analyzed
+            is_keep = np.all(df[['SIG_' + m for m in other_methods]] == True, axis=1)
+
         dfi = df.loc[is_keep].copy()
         if len(other_methods) > 0:
             table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
@@ -3213,114 +3230,6 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
             )
         fig_tables[title_short] = fig_table
     return fig_tables, all_titles
-
-
-    # OLD WAY OF MAKING A SINGLE TABLE FOR THE SUMMARY dNdScv report type
-
-    # # find all method types
-    # methods_significance = [c.split('_')[-1] for c in df.columns if 'SIG' in c]
-
-    # # generate all subsets using chain and combinations
-    # subsets = chain.from_iterable(combinations(methods_significance, r) for r in range(len(methods_significance) + 1))
-    # # sort subsets by length in descending order
-    # subsets = sorted(subsets, key=len, reverse=True)[:-1]
-    # print("This is subset: ", subsets)
-    # all_titles = []
-
-    # fig_tables = {}
-    # # for i, s in enumerate(subsets):
-    #     # title_short = ', '.join(s[:-2]) + (', ' if len(s) > 2 else '') + ' and '.join(s[-2:]) + (
-    #     #     ' only' if i > 0 else '')
-    # title_short = dropdown_menu_value
-    # title = 'Significant with ' + title_short + ':'
-
-    # # ADDED THIS LINE IN!!
-    # # all_titles.append(title_short)
-    # # MutSig2, dNdScv, and DIG
-    # print("this is what title_short looks like!!: ", title_short)
-    # print("this is what split title_short looks like: ", title_short.split(","))
-    # # need to look at each component from title_short
-    # new_dropdown_val = ""
-    # # have to get the different methods -> MutSig2, dNdScv, and DIG
-    # try:
-    #     new_dropdown_val = dropdown_menu_value.replace("and", "").replace("only", "")
-    # except:
-    #     new_dropdown_val = dropdown_menu_value.replace("only", "")
-    # methods = new_dropdown_val.split(" ")
-
-    # is_sig = np.all(df[['SIG_' + m for m in methods]] == True, axis=1)
-    
-    # if title_short == "MutSig2, dNdScv, and DIG":
-    #     is_keep = is_sig
-    #     other_methods = []
-    # else:
-    #     new_dropdown_val = ""
-        
-    #     other_methods =   np.setdiff1d(subsets[0], title_short).tolist()
-    #     is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
-    #     is_keep = np.logical_and(is_sig, is_notsig)
-    # dfi = df.loc[is_keep].copy()
-    # if len(other_methods) > 0:
-    #     table_annot = dfi[['SIG_' + m for m in other_methods]].isna().to_numpy().sum() > 0
-    #     # BE CAREFUL THAT THE COMPARISON BUG DOESN'T HAPPEN HERE TOO!!
-    #     dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
-    # else:
-    #     table_annot = False
-
-    # # formatting data in columns
-    # dfi = format_cols(dfi)
-
-    # # generate table figure
-    # fig_table = go.Figure(data=[go.Table(
-    #     header=dict(values=['<b>' + col + '</b>' for col in dfi.columns if col != 'CHROM'],
-    #                 line_color=lineColor,
-    #                 fill_color=headerColor,
-    #                 align=['left'] + ['center'] * (len(dfi.columns) - 2),#(len(dfi.columns) - 1),
-    #                 font=dict(color='white', size=12)
-    #                 ),
-    #     cells=dict(values=[dfi[col].tolist() for col in dfi.columns if col != 'CHROM'],
-    #                 line_color=lineColor,
-    #                 fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(dfi.shape[0])]],
-    #                 align=['left'] + ['center'] * (len(dfi.columns) - 2),#(len(dfi.columns) - 1),
-    #                 font=dict(color=lineColor, size=11),
-    #                 )
-    # )])
-    # # table height
-    # height = 100 + len(dfi) * 20
-    # # add title
-    # fig_table.update_layout(
-    #     title=dict(
-    #         text=title,
-    #         font=dict(size=18),
-    #         x=0.5,
-    #         y=(height - 1) / height,
-    #         xanchor='center',
-    #         yanchor='top',
-    #     ),
-    #     margin=dict(r=5, l=5, t=30, b=30),
-    #     height=height
-    # )
-    # if table_annot:
-    #     fig_table.update_layout(
-    #         annotations=[
-    #             dict(
-    #                 text="{GENE}*: Gene not tested by at least one of the other method(s)",
-    #                 x=0,
-    #                 y=-15 / (height - 60),
-    #                 xref="paper",
-    #                 yref="paper",
-    #                 showarrow=False,
-    #                 align="left",
-    #                 valign="top",
-    #                 font=dict(size=12)
-    #             )
-    #         ]
-    #     )
-    # # fig_tables[title_short] = fig_table
-    # print("this is title_short: ", title_short)
-        
-    # # return fig_tables, all_titles
-    # return fig_table
 
 def generate_dnds_comparison_dataframe(
         path_mutsig,
