@@ -14,27 +14,30 @@ import plotly.graph_objects as go
 from AnnoMate.Data import Data, DataAnnotation
 from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
-from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
+from SNVReviewers.AppComponents.DIGAppComponent import MUTSIG_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS
+from SNVReviewers.AppComponents.MutSigComponentHelpers import gen_mutsig_results_app_component, MUTSIG_REPORT_COLUMN_NAMES
 
 import pandas as pd
 import numpy as np
 
-MUTSIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "NNEI", "NNCD", "NSIL", "NMIS", "NSTP", "NSPL", "NIND"
-                              #, # FINISH PUTTING THE REST OF THE COLUMN NAMES LATER!!
-                              ]
+
 
 def gen_mutsig_app_component_data_callback(
     data: GenericData,
     idx,
     mutsig_dropdown_value
 ):
-    data = pd.DataFrame().to_dict("records")
-    return[ 
-        data
-    ]
+    all_page_content = []
+    mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
+
+    if mutsig_dropdown_value is None:
+        mutsig_dropdown_value = "all"
+
+    all_page_content = gen_mutsig_results_app_component(mutsig_df, mutsig_dropdown_value)
+    
+    return all_page_content
 
 def gen_mutsig_app_component_layout():
     
@@ -56,17 +59,13 @@ def gen_mutsig_app_component_layout():
                         # dbc.Label('dnds-dropdowm-label', children=""),
                         dcc.Dropdown(
                         id='mutsig-gene-dropdown',
-                        options=[],
+                        options=RESULTS_DROPDOWN_OPTIONS,
                         value='',
                         ),
                     ]),
                     
                 ]),
 
-                # REMOVE LATER!!!
-                html.Div([
-                    dbc.Label(id="mutsig-special-text-output", children=""),
-                ]),
                 # Graphs above the coding region table
                 dbc.Row([
                     dbc.Col([
@@ -130,5 +129,9 @@ def gen_mutsig_app_component():
         ],
         callback_output=[
             Output('mutsig-report-table', 'data'),
+            Output('mutsig-qq-graph', 'figure'),
+            Output('mutsig-gene-dropdown', 'value'),
+
+            Output('mutsig-debugging', 'children'),
         ],
     )
