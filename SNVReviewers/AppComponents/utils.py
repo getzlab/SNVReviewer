@@ -456,7 +456,9 @@ def generate_combined_plot_data(df, mut, bur, display_bounds, scatterpoint):
 
 
 # for combined dig report plots
-def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key, display_labels_key, scatterpoint_key):
+def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key, 
+                                    #    display_labels_key, 
+                                       scatterpoint_key):
 
     # prepare plot data for all combinations of mut_type and burden_type dropdown options
     plot_data = {}
@@ -465,7 +467,7 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
     bur_val = combined_burden_plot_type[bur_key]
     display_bounds_val = display_bounds_type[display_bounds_key]
     scatterpoint_val = scatterpoint_type[scatterpoint_key]
-    display_labels_val = display_labels_type[display_labels_key]
+    # display_labels_val = display_labels_type[display_labels_key]
     text_special = ""
 
     if not (mut_key in ['indels', 'indels_snvs'] and bur_key == 'sample_wise'):
@@ -563,25 +565,25 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
                 )
             )
 
-        if display_labels_val:
-            x_capped = x[ind_capped].tolist()
-            x_ncapped = x[ind_ncapped].tolist()
-            y_capped = [ymax] * sum(ind_capped)
-            y_ncapped = y[ind_ncapped].tolist()
-            labels_capped = labels[ind_capped].tolist()
-            labels_ncapped = labels[ind_ncapped].tolist()
-            for (xi, yi, label) in zip(x_capped + x_ncapped, y_capped + y_ncapped,
-                                        labels_capped + labels_ncapped):
-                qq_fig.add_annotation(
-                    x=xi,
-                    y=yi - ylim_upper * y_gap_annot,
-                    text=label.split('<br>')[-1],
-                    showarrow=False,
-                    font=dict(color=col_sig),
-                    textangle=-90,
-                    xanchor="center",
-                    yanchor="top"
-                )
+        # if display_labels_val:
+        #     x_capped = x[ind_capped].tolist()
+        #     x_ncapped = x[ind_ncapped].tolist()
+        #     y_capped = [ymax] * sum(ind_capped)
+        #     y_ncapped = y[ind_ncapped].tolist()
+        #     labels_capped = labels[ind_capped].tolist()
+        #     labels_ncapped = labels[ind_ncapped].tolist()
+        #     for (xi, yi, label) in zip(x_capped + x_ncapped, y_capped + y_ncapped,
+        #                                 labels_capped + labels_ncapped):
+        #         qq_fig.add_annotation(
+        #             x=xi,
+        #             y=yi - ylim_upper * y_gap_annot,
+        #             text=label.split('<br>')[-1],
+        #             showarrow=False,
+        #             font=dict(color=col_sig),
+        #             textangle=-90,
+        #             xanchor="center",
+        #             yanchor="top"
+        #         )
 
         # Line plots
         qq_fig.add_trace(
@@ -637,24 +639,24 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
             )
         )
 
-        # Save figures as separate data
-        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-            'qq': qq_fig.to_dict(),
-            'table': table_fig.to_dict(),
-            'text': bur_key + ' Mutation Burden of ' + mut_key,
-            'textcolor': 'black-text'
-        }
+        # # Save figures as separate data
+        # plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
+        #     'qq': qq_fig.to_dict(),
+        #     'table': table_fig.to_dict(),
+        #     'text': bur_key + ' Mutation Burden of ' + mut_key,
+        #     'textcolor': 'black-text'
+        # }
     else:
         qq_fig = go.Figure()
         table_fig = go.Figure()
         text_special = SPECIAL_TEXT
 
-        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-            'qq': None,
-            'table': None,
-            'text': SPECIAL_TEXT,
-            'textcolor': 'red-text'
-        }
+        # plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
+        #     'qq': None,
+        #     'table': None,
+        #     'text': SPECIAL_TEXT,
+        #     'textcolor': 'red-text'
+        # }
     
     return qq_fig, table_fig, text_special
 
@@ -964,7 +966,8 @@ def generate_coding_region_report(
         df,
         mut_key, 
         bur_key, 
-        display_bounds_key, 
+        display_bounds_key,
+        # display_label_key, 
         scatterpoint_key,
         alp=0.1
     ):
@@ -1318,14 +1321,15 @@ def generate_coding_region_report(
         }
     else:
         text_special = SPECIAL_TEXT
-        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}"] = {
-            'volcano': None,
-            'qq': None,
-            'dnds': None,
-            'table': None,
-            'text': SPECIAL_TEXT    ,
-            'textcolor': 'red-text'
-        }
+        volcano_fig = go.Figure()
+        qq_fig = go.Figure()
+        fig_mu = go.Figure()
+        fig_sigma = go.Figure()
+        dnds_fig = go.Figure()
+        table_fig = go.Figure()
+        df_kept = pd.DataFrame()
+
+        return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special
 
     # generate histograms for MU and SIGMA
     fig_mu = go.Figure(data=[go.Histogram(
@@ -1438,7 +1442,14 @@ def generate_dig_non_coding_region_dataframe(
 
     return df
 
-def generate_non_coding_region_plot_data(df, mut, bur, display_bounds, scatterpoint, alp=0.1):
+def generate_non_coding_region_plot_data(
+        df, 
+        mut, 
+        bur, 
+        display_bounds, 
+        scatterpoint, 
+        alp=0.1
+    ):
     """
     Given a mutation type and a burden type, generate the data for the volcano plot, Q-Q plot, and table plot
     :param mut: str, mutation type

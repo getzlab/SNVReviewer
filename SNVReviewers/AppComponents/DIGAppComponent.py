@@ -52,13 +52,11 @@ DIG_LABEL_IDX = 1
 def gen_dig_app_component_data_internal_callback(
     data: GenericData,
     idx,
-    # dig_label,
     dig_radio_item_selection,
     mutation_type,
     burden_type,
     p_val_type,
-    display_toggle_value,
-    display_label_value
+    display_bounds_value,
 ):
     """
     
@@ -84,8 +82,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
-            display_label_value
+            display_bounds_value,
         )
         
     elif dig_radio_item_selection == 'Coding region':
@@ -103,7 +100,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_label_value
+            display_bounds_value,
         )
 
     # NEED TO FIGURE OUT HOW TO GET THE PROMOTER, 5 PRIME UTR REPORT TYPES WORKING
@@ -127,7 +124,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_label_value
+            display_bounds_value,
         )
 
     elif dig_radio_item_selection == "5-prime UTRs":
@@ -143,7 +140,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_label_value
+            display_bounds_value,
         )
 
     elif dig_radio_item_selection == "3-prime UTRs":
@@ -160,7 +157,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_label_value
+            display_bounds_value,
         )
 
     elif dig_radio_item_selection == 'Introns':
@@ -176,7 +173,7 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_label_value
+            display_bounds_value,
         )
 
     return all_page_content
@@ -255,13 +252,6 @@ def gen_dig_app_component_layout():
                             label='Display Bounds',
                             on=False),
                         ]),
-                        dbc.Col([
-                            # makes a toggle component
-                            daq.BooleanSwitch(
-                            id='display-labels-toggle-switch',
-                            label='Display Labels',
-                            on=False),
-                        ])
                     ])
                 ]),
 
@@ -374,7 +364,6 @@ def gen_dig_report_app_component():
             Input('dig-burden-dropdown', 'value'),
             Input('dig-p-value-dropdown', 'value'),
             Input('display-bounds-toggle-switch', 'on'),
-            Input('display-labels-toggle-switch', 'on')
         ],
 
         callback_output=[

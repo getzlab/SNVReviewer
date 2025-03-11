@@ -1,39 +1,13 @@
-from dash import dcc, html
-from dash.dependencies import Input, Output
-import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
-import dash_daq as daq
-
-from AnnoMate.ReviewDataApp import AppComponent
-from AnnoMate.DataTypes.GenericData import GenericData
-
-from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
-import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
-
-from AnnoMate.Data import Data, DataAnnotation
-from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
-from AnnoMate.DataTypes.GenericData import GenericData
-from cnv_suite.visualize import plot_acr_interactive
-
-from rpy2.robjects import r, pandas2ri
-import rpy2.robjects as robjects
-import os
-import pickle
-from typing import Union, List, Dict
-import sys
-from cnv_suite import calc_cn_levels
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-# from SNVReviewers.AppComponents.DIGAppComponent_CodingRegion import gen_dig_app_coding_region_component_layout, DIG_CODING_REGION_REPORT_COLUMN_NAMES
 from SNVReviewers.AppComponents.utils import generate_combined_dig_report_plots, combined_mutation_type, combined_burden_plot_type, scatterpoint_type
 from SNVReviewers.AppComponents.utils import generate_coding_region_report, coding_region_mutation_type, coding_region_burden_type
 from SNVReviewers.AppComponents.utils import generate_dig_non_coding_plots, non_coding_region_burden_type, reformat_numbers
 
-DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "FDR", "PVAL", "OBS", "FDR"
-                                         'EXP', 'MU', 'SIGMA', 'dNdS_OBS', 'dNdS_EXP', 'FLAG', 'CGC', 'PANCAN']
+DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "PVAL", "FDR", "OBS", 
+                                         "EXP", 'MU', 'SIGMA', 'dNdS_OBS', 'dNdS_EXP', 'FLAG', 'CGC', 'PANCAN']
 
 DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                                     "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
@@ -76,6 +50,13 @@ COMBINED_SCATTER_DROPDOWN = [
             {'label': 'P-mid', 'value': 'p_mid'},
         ]
 
+SHOW_QQ_BIG_PLOT_STYLE = {'width':'1200px'}
+SHOW_QQ_SMALL_PLOT_STYLE = {'width':'600px'}
+HIDE_PLOT_STYLE = {'display':'none'}
+SHOW_VOLCANO_PLOT_STYLE = {'display':'inline-block', 'width':'600px'}
+SHOW_THREE_PLOTS_STYLE = {'display':'block', 'width':'350px'}
+SHOW_TWO_PLOTS_STYLE = {'display':'block', 'width':'350px'}
+
 DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs"]
 DIG_DATAFRAME_IDX = 0
 DND_DATAFRAME_IDX = 1
@@ -88,8 +69,7 @@ def gen_combined_app_component(
     mutation_type,
     burden_type,
     p_val_type,
-    display_toggle_value,
-    display_label_value
+    display_bounds_value,
 ):
     """
     
@@ -100,7 +80,7 @@ def gen_combined_app_component(
     dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type])
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
-    display_bounds = display_toggle_value # whether to display the bounds
+    display_bounds = display_bounds_value # whether to display the bounds
     
     qq_fig = go.Figure()
     fig_mu = go.Figure()
@@ -109,22 +89,14 @@ def gen_combined_app_component(
     volcano_fig = go.Figure()
 
     # checks if the user wants to display the bounds on the dig report plot
-    if display_toggle_value:
+    if display_bounds_value:
         display_bounds = 'Yes'
 
     # defaults to not displaying lower/upper bounds on the dig report plot
     else:
         display_bounds = 'No'
-    
-    if display_label_value:
-        display_labels_key = 'Yes'
-    
-    else:
-        display_labels_key = 'No'
 
-    qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, 
-                                                                            burden_type, display_bounds, 
-                                                                            display_labels_key, p_val_type)
+    qq_fig, table_fig, text_special = generate_combined_dig_report_plots(dig_df, mutation_type, burden_type, display_bounds, p_val_type)
     dig_data_columns = []
     
     for clm_nm in DIG_REPORT_COMBINED_COLUMN_NAMES:
@@ -147,16 +119,6 @@ def gen_combined_app_component(
         if pd.api.types.is_float_dtype(dig_df[column]) and column != 'RANK':
             dig_df[column] = reformat_numbers(dig_df[column], format='{:.3E}')
 
-        # # skip the rank column
-        # if column == 'RANK':
-        #     continue
-
-        # format='{:.3E}'
-
-        # # rounds all the values in the FDR and PVAL columns to 4 significant digits
-        # if 'FDR' in column or 'PVAL' in column:
-        #     dig_df[column] = [format.format(value) for value in dig_df[column]]
-        
     # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!!   
     dig_df = dig_df[:100]
@@ -179,11 +141,11 @@ def gen_combined_app_component(
                 COMBINED_SCATTER_DROPDOWN, 
 
                 # changing the plot size and the visibility of the plots
-                {'width':'1200px'},
-                {'display':'none'}, # hides the volcano plot
-                {'display':'none'}, # hides the volcano plot
-                {'display':'none'}, # hides the volcano plot
-                {'display':'none'}, # hides the volcano plot
+                SHOW_QQ_BIG_PLOT_STYLE, # displays the qq plot
+                HIDE_PLOT_STYLE,        # hides the volcano plot
+                HIDE_PLOT_STYLE,        # hides the volcano plot
+                HIDE_PLOT_STYLE,        # hides the volcano plot
+                HIDE_PLOT_STYLE,        # hides the volcano plot
 
                 # Warning text message (only generated if you get a specific mutation and burden type combination on dropdown menu)
                 text_special,
@@ -197,34 +159,37 @@ def gen_coding_region_app_component(
         mutation_type,
         burden_type,
         p_val_type,
-        display_label_value
+        display_bounds_value,
     ):  
     """
     
     """
-    debugging=""
+    debugging = ""
     all_page_content = []
     dig_df = dig_df.copy()
-    # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
-    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]) #+ "_" + scatterpoint_type[p_val_type])
-    dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
-    qq_fig = go.Figure()
+    bad_mutation_burden_combination = [("indels_nonsynonymous_snvs", "sample_wise"), ("indels", "sample_wise")]
     
-    if display_label_value:
-        display_labels_key = 'Yes'
-    
+    if (mutation_type, burden_type) not in bad_mutation_burden_combination:
+        # sort the table with respect to 'PVAL' column, smallest(1) -> largest(nth)
+        dig_df = dig_df.sort_values(by='PVAL'+ "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type]) #+ "_" + scatterpoint_type[p_val_type])
+        dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
+
+    # checks if the user wants to display the bounds on the dig report plot
+    if display_bounds_value:
+        display_bounds_key = 'Yes'
+
+    # defaults to not displaying lower/upper bounds on the dig report plot
     else:
-        display_labels_key = 'No'
+        display_bounds_key = 'No'
 
     # MAKE SURE TO REDO THE CODING REGION VALUES, ADD IF STATEMENTS TO CHANGE WHAT GETS DISPLAYED BASED ON THE DROP DOWN MENU
-    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
-    df_kept_new = df_kept[['dNdS_OBS', 'dNdS_EXP', 'GENE']]
+    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, dnds_fig, table_fig, text_special = generate_coding_region_report(dig_df, 
+                                                                                                                       mutation_type, 
+                                                                                                                       burden_type, 
+                                                                                                                       display_bounds_key, 
+                                                                                                                       p_val_type)
     dig_data_columns = []
-    
-    debugging = "Column names in df_kept: "
-    for clm in df_kept:
-        debugging = debugging + "/" + clm
-    
+        
     for clm_nm in DIG_CODING_REGION_REPORT_COLUMN_NAMES:
         dig_data_clm_dict = {}
         dig_data_clm_dict["name"] = clm_nm
@@ -233,21 +198,17 @@ def gen_coding_region_app_component(
         
         try: 
             if "PVAL" in clm_nm:
-                # gets the column name corresponding to the mutation type and the scatterpoint type
                 dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type] #+ "_" +scatterpoint_type[p_val_type]
 
-            # no fdr column for nonsyn
             elif 'FDR' in clm_nm:
-                #and coding_region_mutation_type[mutation_type] != "NONSYN":
-                dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+                dig_data_clm_dict["id"] = clm_nm + "_" + coding_region_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type] + "_" + scatterpoint_type[p_val_type]
             
             elif 'LENGTH' in clm_nm:
                 dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
 
             # no modifications needed 
             elif 'dNdS_OBS' in clm_nm or 'dNdS_EXP' in clm_nm:
-                continue
-                # dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type]
+                dig_data_clm_dict["id"] = clm_nm 
 
             elif 'OBS' in clm_nm or 'EXP' in clm_nm: 
                 dig_data_clm_dict["id"] = clm_nm + "_"+ coding_region_mutation_type[mutation_type]
@@ -255,41 +216,26 @@ def gen_coding_region_app_component(
             dig_data_columns.append(dig_data_clm_dict)
 
         # skip adding this column to the data dictionary 
-        except:
-            print("ran into an issue with this column name: ", clm_nm + "_" + coding_region_mutation_type[mutation_type] + coding_region_burden_type[burden_type])
+        except KeyError as k:
+            debugging = debugging + f"error: {k}/" + clm_nm + "_" + coding_region_mutation_type[mutation_type] + coding_region_burden_type[burden_type]
+            print("ran into an issue with this column name: ", clm_nm + "_" + coding_region_mutation_type[mutation_type] + "_"+ coding_region_burden_type[burden_type])
             continue
-            # dig_data_clm_dict["id"] = clm_nm
 
-    for column_dict in dig_data_columns:
-        # gets the dig data column name
-        column = column_dict["id"]
+    if len(df_kept):
+        for column_dict in dig_data_columns:
+            # gets the dig data column name
+            column = column_dict["id"]
 
-        # # skip the rank column
-        # if column == 'RANK':
-        #     continue
-
-        # reformats the columns with float values in them
-        if pd.api.types.is_float_dtype(df_kept[column]) and column != 'RANK':
-            df_kept[column] = reformat_numbers(df_kept[column], format='{:.3E}')
-
-        # # rounds all the values in the FDR and PVAL columns to 4 significant digits
-        # format='{:.3E}'
-        # if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column: #or 'dNdS_OBS' in column or 'dNdS_EXP' in column:
-        #     dig_df[column] = [format.format(value) for value in dig_df[column]]
-        
-    # get the coding region working plots working!!
-    # get the display bounds selection tool working 
-
-    # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
-    # REMOVE THE DEBUGGING LATER!!!
-    #   
-    dig_df = df_kept[:100] 
-    # dig_df = dig_df[:100]
-
-
+            # reformats the columns with float values in them
+            if pd.api.types.is_float_dtype(df_kept[column]) and column != 'RANK':
+                df_kept[column] = reformat_numbers(df_kept[column], format='{:.3E}')
+            
+        # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
+        # REMOVE THE DEBUGGING LATER!!!
+        df_kept = df_kept[:100] 
 
     all_page_content = [
-            dig_df.to_dict('records'),
+            df_kept.to_dict('records'),
             volcano_fig,
             qq_fig,
             fig_mu, 
@@ -306,11 +252,11 @@ def gen_coding_region_app_component(
             CODING_REGION_SCATTER_DROPDOWN, 
 
             # changing the plot size and the visibility of the plots
-            {'width':'600px'},
-            {'display':'inline-block', 'width':'600px'}, # displays the volcano plot
-            {'display':'block', 'width':'350px'}, # displays the fig mu plot
-            {'display':'block', 'width':'350px'},  # displays the fig sigma plot
-            {'display':'block', 'width':'350px'},  # displays the dnds plot
+            SHOW_QQ_SMALL_PLOT_STYLE,   # displays the qq plot
+            SHOW_VOLCANO_PLOT_STYLE,    # displays the volcano plot
+            SHOW_THREE_PLOTS_STYLE,     # displays the fig mu plot
+            SHOW_THREE_PLOTS_STYLE,     # displays the fig sigma plot
+            SHOW_THREE_PLOTS_STYLE,     # displays the dnds plot
 
             text_special,
             debugging
@@ -322,14 +268,13 @@ def gen_non_coding_app_component(
     mutation_type,
     burden_type,
     p_val_type,
-    display_label_value
+    display_bounds_value,
 ):
     """
     
     """
     debugging=""
     all_page_content = []
-    # CHANGE THE INPUT, SO INSTEAD OF data, MAKE INPUT dig_df
     dig_df = dig_df.copy()
     dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type])
     dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
@@ -341,13 +286,13 @@ def gen_non_coding_app_component(
     dnds_fig = go.Figure()
     volcano_fig = go.Figure()
 
-    if display_label_value:
-        display_labels_key = 'Yes'
+    if display_bounds_value:
+        display_bounds_key = 'Yes'
     
     else:
-        display_labels_key = 'No'
+        display_bounds_key = 'No'
 
-    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_labels_key, p_val_type)
+    df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_bounds_key, p_val_type)
     columns_to_keep = [column_name for column_name in df_kept if 'FDR' in column_name or 'GENE' in column_name]
 
     # gets the relevant FDR and GENE column
@@ -355,7 +300,6 @@ def gen_non_coding_app_component(
     merged_dig_df = dig_df.merge(df_new, on='GENE', how='outer', suffixes=('_left', '_right')) 
 
     for clm in merged_dig_df:
-
         if 'FDR' in clm:
             debugging = debugging + f"_{clm}"
 
@@ -401,16 +345,6 @@ def gen_non_coding_app_component(
         if pd.api.types.is_float_dtype(dig_df[column]) and column != 'RANK':
             dig_df[column] = reformat_numbers(dig_df[column], format='{:.3E}')
 
-        # # skip the rank column
-        # if column == 'RANK':
-        #     continue
-
-        # format='{:.3E}'
-
-        # # rounds all the values in the FDR and PVAL columns to 4 significant digits
-        # if 'FDR' in column or 'PVAL' in column or 'MU' in column or 'SIGMA' in column:
-        #     merged_dig_df[column] = [format.format(value) for value in merged_dig_df[column]]
-
     # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
     # REMOVE THE DEBUGGING LATER!!! 
     # dig_df = dig_df[:100]
@@ -437,11 +371,11 @@ def gen_non_coding_app_component(
             CODING_REGION_SCATTER_DROPDOWN,
 
             # changing the plot size and the visibility of the plots
-            {'width':'600px'},
-            {'display':'inline-block', 'width':'600px'}, # displays the volcano plot
-            {'display':'block', 'width':'600px'}, # displays the fig mu plot
-            {'display':'block', 'width':'600px'},  # displays the fig sigma plot
-            {'display':'none'},  # displays the dnds plot
+            SHOW_QQ_SMALL_PLOT_STYLE,   # displays the qq plot
+            SHOW_VOLCANO_PLOT_STYLE,    # displays the volcano plot
+            SHOW_TWO_PLOTS_STYLE,       # displays the fig mu plot
+            SHOW_TWO_PLOTS_STYLE,       # displays the fig sigma plot
+            HIDE_PLOT_STYLE,            # hides the dnds plot
 
             text_special,
             debugging
