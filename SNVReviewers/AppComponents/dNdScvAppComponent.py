@@ -1,18 +1,13 @@
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
-import dash_daq as daq
-
 from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output, State
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
 
-from AnnoMate.Data import Data, DataAnnotation
-from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
+from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
 from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
@@ -127,7 +122,6 @@ def gen_dNdScv_app_component_layout():
                         html.Div([
                             dbc.Label(id="dnds-dropdowm-label", children=""),
                         ]),
-                        # dbc.Label('dnds-dropdowm-label', children=""),
                         dcc.Dropdown(
                         id='dnds-gene-dropdown',
                         options=[],
@@ -164,16 +158,7 @@ def gen_dNdScv_app_component_layout():
             ]),
 
             html.Div(
-                [
-                    # # displays the type of dig report you want displayed
-                    # dbc.Row([
-                    #     html.Div(
-                    #         [
-                    #             dbc.Label("dndSCV Report Table: "),
-                    #             html.Label(children="Results", id="dnd-report-type-label"), # initialize label to empty string
-                    #         ])
-                    #     ]),                
-                    
+                [        
                 # displays first table for the dNdScv comparison report
                 html.Div(
                     children=[

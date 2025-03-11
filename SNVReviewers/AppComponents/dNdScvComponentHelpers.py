@@ -1,33 +1,11 @@
-from dash import dcc, html
-from dash.dependencies import Input, Output
-import dash_bootstrap_components as dbc
+
 import plotly.graph_objects as go
-import dash_daq as daq
-
-from AnnoMate.ReviewDataApp import AppComponent
-from AnnoMate.DataTypes.GenericData import GenericData
-
-from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
-import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
-
-from AnnoMate.Data import Data, DataAnnotation
-from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
-from AnnoMate.DataTypes.GenericData import GenericData
-from cnv_suite.visualize import plot_acr_interactive
-
-from rpy2.robjects import r, pandas2ri
-import rpy2.robjects as robjects
-import os
-import pickle
-from typing import Union, List, Dict
-import sys
-from cnv_suite import calc_cn_levels
 import pandas as pd
 import numpy as np
-
 from SNVReviewers.AppComponents.utils import reformat_numbers
+import pandas as pd
+import numpy as np
+from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot
 
 RESULTS_DROPDOWN_OPTIONS = [
     {'label':'All', 'value': 'all'},
@@ -53,6 +31,7 @@ SUMMARY_DROPDOWN_OPTIONS = [
     {'label': "DIG only", 'value':"DIG only"}
 ]
 
+# different plot styles
 QQ_PLOT_RESULT_STYLE = {"width":"1200px"}
 DNDS_GLOBAL_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_MIS_RESULT_STYLE = {'display':'block', 'width':'600px'}
@@ -60,6 +39,7 @@ DNDS_TRUNC_RESULT_STYLE = {'display':'block', 'width':'600px'}
 DNDS_COMPARISON_STYLE = {"width":"1200px"}
 HIDE_PLOTS_STYLE = {"display":"none"}
 
+# different table styles
 HIDE_TABLE_STYLE = {"display":"none"}
 SHOW_TABLE_STYLE = {
                     'width': '100%',  # Make the table width responsive
@@ -67,6 +47,7 @@ SHOW_TABLE_STYLE = {
                     'overflowX': 'auto',  # Allow horizontal scroll if necessary
                     }
 
+# column names to be displayed on the dash table depending on report type
 DNDSCV_REPORT_COLUMN_NAMES = ["RANK", "GENE", "N_SYN", "N_MIS", "N_NON", "N_SPL", "N_IND",
                               "dNdS_MIS", "dNdS_NON", "dNdS_SPL", "dNdS_IND", "PVAL_MIS",
                               "PVAL_TRUNC", "PVAL_IND", "PVAL", "FDR", "CGC", "PANCAN"]
@@ -75,18 +56,12 @@ DNDSCV_SUMMARY_COLUMN_NAMES = ['RANK', 'GENE', 'SIZE_coding', 'PVAL_MutSig2', 'P
                                'PVAL_comb', 'FDR_MutSig2', 'FDR_dNdScv', 'FDR_DIG', 'FDR_comb', 'SIG_MutSig2',
                                'SIG_dNdScv', 'SIG_DIG', 'CGC', 'PANCAN']
 
+# dropdown label for the different report types
 DNDS_RESULTS_DROPDOWM_LABEL = 'Select Number of Significant Gene Labels to Display:'
 DNDS_COMPARISON_DROPDOWM_LABEL = 'Tools to compare:'
 DNDS_SUMMARY_DROPDOWM_LABEL = 'List genes significant with:'
 
 # dNdScv dataframe and plot generation
-import argparse
-import pandas as pd
-import plotly.graph_objects as go
-import numpy as np
-import json
-from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot
-
 def gen_dndscv_results_app_component(
     dnd_df_plot,
     dnd_df_merged,

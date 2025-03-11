@@ -1,18 +1,12 @@
 from dash import dcc, html
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
-import dash_daq as daq
-
 from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
-
 from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
 
-from AnnoMate.Data import Data, DataAnnotation
-from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
+from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.DIGAppComponent import MUTSIG_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
@@ -29,6 +23,8 @@ def gen_mutsig_app_component_data_callback(
     idx,
     mutsig_dropdown_value
 ):
+    """
+    """
     all_page_content = []
     mutsig_df = data.df[SNV_DATA_COLUMN_NAME][0][MUTSIG_DATAFRAME_IDX]
     mustsig_dropwdown_values = [option["value"] for option in RESULTS_DROPDOWN_OPTIONS]
@@ -41,6 +37,8 @@ def gen_mutsig_app_component_data_callback(
     return all_page_content
 
 def gen_mutsig_app_component_layout():
+    """ 
+    """
     
     return [   
             # REMOVE LATER!!!
@@ -55,9 +53,8 @@ def gen_mutsig_app_component_layout():
                     dbc.Col([
                         # dropdown for selecting number of significant gene labels to display
                         html.Div([
-                            dbc.Label(id="mutsig-dropdowm-label", children=""),
+                            dbc.Label(id="mutsig-dropdowm-label", children="Number of Significant Gene Labels to Display: "),
                         ]),
-                        # dbc.Label('dnds-dropdowm-label', children=""),
                         dcc.Dropdown(
                         id='mutsig-gene-dropdown',
                         options=RESULTS_DROPDOWN_OPTIONS,
@@ -67,7 +64,6 @@ def gen_mutsig_app_component_layout():
                     
                 ]),
 
-                # Graphs above the coding region table
                 dbc.Row([
                     dbc.Col([
                         # creates the mutsig QQ plot
@@ -119,6 +115,8 @@ def gen_mutsig_app_component_layout():
         ]
 
 def gen_mutsig_app_component():
+    """
+    """
     
     return AppComponent(
         name='MutSig Component',
@@ -132,7 +130,8 @@ def gen_mutsig_app_component():
             Output('mutsig-report-table', 'data'),
             Output('mutsig-qq-graph', 'figure'),
             Output('mutsig-gene-dropdown', 'value'),
-
+            
+            # REMOVE LATER!!
             Output('mutsig-debugging', 'children'),
         ],
     )

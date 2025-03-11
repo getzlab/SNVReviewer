@@ -161,7 +161,6 @@ def gen_combined_app_component(
 
     all_page_content = [
                 dig_df.to_dict('records'),
-                # dig_type_selection,
                 volcano_fig,
                 qq_fig,
                 fig_mu, 
@@ -183,6 +182,7 @@ def gen_combined_app_component(
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
                 {'display':'none'}, # hides the volcano plot
+                
                 # Warning text message (only generated if you get a specific mutation and burden type combination on dropdown menu)
                 text_special,
                 debugging
