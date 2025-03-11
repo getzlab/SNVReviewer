@@ -81,7 +81,6 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_combined_app_component(
             dig_df,
-            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
@@ -93,6 +92,7 @@ def gen_dig_app_component_data_internal_callback(
 
         # checking if you are changing to a new report type
         if mutation_type not in coding_region_mutation_type:
+            
             # default values for the coding region dig report
             mutation_type = 'indels_nonsynonymous_snvs'
             burden_type = 'total'
@@ -100,11 +100,9 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_coding_region_app_component(
             dig_df,
-            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
             display_label_value
         )
 
@@ -126,11 +124,9 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_promoter_df,
-            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
             display_label_value
         )
 
@@ -144,11 +140,9 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_prime5_df,
-            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
             display_label_value
         )
 
@@ -163,11 +157,9 @@ def gen_dig_app_component_data_internal_callback(
 
         all_page_content = gen_non_coding_app_component(
             dig_prime3_df,
-            # dig_radio_item_selection, 
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
             display_label_value
         )
 
@@ -184,7 +176,6 @@ def gen_dig_app_component_data_internal_callback(
             mutation_type,
             burden_type,
             p_val_type,
-            display_toggle_value,
             display_label_value
         )
 
