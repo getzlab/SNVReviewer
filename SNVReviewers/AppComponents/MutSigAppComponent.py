@@ -99,7 +99,7 @@ def gen_mutsig_app_component_layout():
                             selected_rows=[0],
                             page_action="native",
                             page_current=0,
-                            page_size=5,
+                            page_size=15,
                         
                             # changing the width of the data table to 
                             style_table={

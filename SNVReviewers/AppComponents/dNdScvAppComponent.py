@@ -12,7 +12,7 @@ from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
 from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
-from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS, DNDSCV_REPORT_COLUMN_NAMES, DNDSCV_COMPARISON_COLUMN_NAMES
+from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS, DNDSCV_REPORT_COLUMN_NAMES, DNDSCV_COMPARISON_COLUMN_NAMES, DNDSCV_SUMMARY_COLUMN_NAMES
 
 import pandas as pd
 import numpy as np
@@ -257,7 +257,6 @@ def gen_dNdScv_app_component_layout():
                 # displays a table for the dig report
                 html.Div(
                     children=[
-                        # html.H2('dNdScv Table'),
                         dash_table.DataTable(
                         id='dnds-report-table',
                         columns=[
@@ -289,36 +288,31 @@ def gen_dNdScv_app_component_layout():
                 ),
                 html.Div(
                     children=[
-                        dcc.Graph(id='dnds-summary-table',
-                                  figure={},
-                                  style={"display":"none"} # hides the plot
-                                )
-                        # # html.H2('Summary Tables'),
-                        # dash_table.DataTable(
-                        # id='dnds-summary-table',
-                        # columns=[
-                        #     {"name": i,
-                        #         "id": i} for i in DNDSCV_REPORT_COLUMN_NAMES
-                        # ],
-                        # data=pd.DataFrame(columns=DNDSCV_REPORT_COLUMN_NAMES).to_dict(
-                        #     'records'),
-                        # editable=False,
-                        # filter_action="native",
-                        # sort_action="native",
-                        # sort_mode="multi",
-                        # row_selectable="single",
-                        # row_deletable=False,
-                        # selected_columns=[],
-                        # selected_rows=[0],
-                        # page_action="native",
-                        # page_current=0,
-                        # page_size=5,
+                        dash_table.DataTable(
+                        id='dnds-summary-table',
+                        columns=[
+                            {"name": i,
+                                "id": i} for i in DNDSCV_SUMMARY_COLUMN_NAMES
+                        ],
+                        data=pd.DataFrame(columns=DNDSCV_SUMMARY_COLUMN_NAMES).to_dict(
+                            'records'),
+                        editable=False,
+                        filter_action="native",
+                        sort_action="native",
+                        sort_mode="multi",
+                        row_selectable="single",
+                        row_deletable=False,
+                        selected_columns=[],
+                        selected_rows=[0],
+                        page_action="native",
+                        page_current=0,
+                        page_size=5,
                     
-                        # # changing the width of the data table to 
-                        # style_table={
-                        #     'display':"none"
-                        #     },
-                        # ),
+                        # changing the width of the data table to 
+                        style_table={
+                            'display':"none"
+                            },
+                        ),
                     ]
                 ),
                 # Graphs below the coding region table
@@ -367,12 +361,15 @@ def gen_dnd_scv_app_component():
             Output('dnds-comparison-table1', 'data'),
             Output('dnds-comparison-table2', 'data'),
             Output('dnds-comparison-table3', 'data'),
-            Output('dnds-summary-table', 'figure'),
+            # Output('dnds-summary-table', 'figure'),
+            Output('dnds-summary-table', 'data'),
 
             # updates the columns for the comparison tables
+            # Output('dnds-report-table', 'columns'),
             Output('dnds-comparison-table1', 'columns'),
             Output('dnds-comparison-table2', 'columns'),
             Output('dnds-comparison-table3', 'columns'),
+            Output('dnds-summary-table', 'columns'),
 
             # dNdScv figures
             Output('dnds-qq-graph', 'figure'),
@@ -393,7 +390,8 @@ def gen_dnd_scv_app_component():
             Output('dnds-comparison-table1', 'style_table'),
             Output('dnds-comparison-table2', 'style_table'),
             Output('dnds-comparison-table3', 'style_table'),
-            Output('dnds-summary-table', 'style'),
+            # Output('dnds-summary-table', 'style'),
+            Output('dnds-summary-table', 'style_table'),
 
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),

@@ -3002,7 +3002,6 @@ def plot_table_comparison(df, sig_genes_dict):
     their respective significant genes.
     """
     methods = [k.split(' ')[0] for k in list(sig_genes_dict.keys()) if 'only' in k]
-    fig_tables = []
     df_plot_list = []
 
     for key in sig_genes_dict:
@@ -3014,7 +3013,6 @@ def plot_table_comparison(df, sig_genes_dict):
             # makes sure every element in gene column is a string
             df_plot['GENE'] = df_plot['GENE'].astype(str)
 
-            print("Inside the plot_table_comparison function")
             table_annot = df_plot['SIG_' + method_other[0]].isna().sum() > 0
             df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] + "*"
         
@@ -3022,53 +3020,8 @@ def plot_table_comparison(df, sig_genes_dict):
             table_annot = False
         # formatting data in columns
         df_plot = format_cols(df_plot)
-        # generate table figure
-        fig_table = go.Figure(data=[go.Table(
-            header=dict(values=['<b>' + col + '</b>' for col in df_plot.columns],
-                        line_color=lineColor,
-                        fill_color=headerColor,
-                        align=['left'] + ['center'] * (len(df_plot.columns) - 1),
-                        font=dict(color='white', size=12)
-                        ),
-            cells=dict(values=[df_plot[col].tolist() for col in df_plot.columns],
-                       line_color=lineColor,
-                       fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_plot.shape[0])]],
-                       align=['left'] + ['center'] * (len(df_plot.columns) - 1),
-                       font=dict(color=lineColor, size=11),
-                       )
-        )])
-        # table height
-        height = 100 + len(df_plot) * 20
-        # add title
-        fig_table.update_layout(
-            title=dict(
-                text='Significant with ' + key + ':',
-                font=dict(size=18),
-                x=0.5,
-                y=(height-1)/height,
-                xanchor='center',
-                yanchor='top',
-            ),
-            margin=dict(r=5, l=5, t=30, b=30),
-            height=height
-        )
-        if table_annot:
-            fig_table.update_layout(
-                annotations=[
-                    dict(
-                        text="{{GENE}}*: Gene not tested by {}".format(method_other[0]),
-                        x=0,
-                        y=-15/(height-60),
-                        xref="paper",
-                        yref="paper",
-                        showarrow=False,
-                        align="left",
-                        valign="top",
-                        font=dict(size=12)
-                    )
-                ]
-            )
-        fig_tables.append(fig_table)
+        
+        # fig_tables.append(fig_table)
         df_plot_list.append(df_plot)
 
     return df_plot_list
@@ -3097,22 +3050,18 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
     """
     # find all method types
     methods = [c.split('_')[-1] for c in df.columns if 'SIG' in c]
+
     # generate all subsets using chain and combinations
     subsets = chain.from_iterable(combinations(methods, r) for r in range(len(methods) + 1))
+
     # sort subsets by length in descending order
     subsets = sorted(subsets, key=len, reverse=True)[:-1]
-    all_titles = []
+    df_tables = {}
 
-    fig_tables = {}
     for i, s in enumerate(subsets):
         title_short = ', '.join(s[:-2]) + (', ' if len(s) > 2 else '') + ' and '.join(s[-2:]) + (
             ' only' if i > 0 else '')
-        title = 'Significant with ' + title_short + ':'
-        all_titles.append(title_short)
-
         is_sig = np.all(df[['SIG_' + m for m in s]] == True, axis=1)
-        print("INSIDE gen_dnds_summary_table function")
-        print("is significant: ", is_sig)
 
         if i == 0:
             is_keep = is_sig
@@ -3122,11 +3071,6 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
             other_methods = np.setdiff1d(subsets[0], s).tolist()
             is_notsig = ~np.any(df[['SIG_' + m for m in other_methods]] == True, axis=1)
             is_keep = np.logical_and(is_sig, is_notsig)
-
-        # elif dropdown_menu_value == "MutSig2CV and DIG only":
-        #     other_methods = ["MutSig2CV", "DIG"]
-        #     # indices where the data is both mutsig2cv and dig
-        #     is_keep = np.where((df['SIG_DIG'] == True) and (df['SIG_MutSig2CV'] == True))[0]
 
         else:
             dropdown_menu_value_methods = dropdown_menu_value.replace(" and", "").replace(" only", "")
@@ -3141,56 +3085,12 @@ def gen_dnds_summary_table(df, dropdown_menu_value):
             dfi.loc[np.any(dfi[['SIG_' + m for m in other_methods]].isna(), axis=1), 'GENE'] += '*'
         else:
             table_annot = False
+
         # formatting data in columns
         dfi = format_cols(dfi)
-        # generate table figure
-        fig_table = go.Figure(data=[go.Table(
-            header=dict(values=['<b>' + col + '</b>' for col in dfi.columns],
-                        line_color=lineColor,
-                        fill_color=headerColor,
-                        align=['left'] + ['center'] * (len(dfi.columns) - 1),
-                        font=dict(color='white', size=12)
-                        ),
-            cells=dict(values=[dfi[col].tolist() for col in dfi.columns],
-                       line_color=lineColor,
-                       fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(dfi.shape[0])]],
-                       align=['left'] + ['center'] * (len(dfi.columns) - 1),
-                       font=dict(color=lineColor, size=11),
-                       )
-        )])
-        # table height
-        height = 100 + len(dfi) * 20
-        # add title
-        fig_table.update_layout(
-            title=dict(
-                text=title,
-                font=dict(size=18),
-                x=0.5,
-                y=(height - 1) / height,
-                xanchor='center',
-                yanchor='top',
-            ),
-            margin=dict(r=5, l=5, t=30, b=30),
-            height=height
-        )
-        if table_annot:
-            fig_table.update_layout(
-                annotations=[
-                    dict(
-                        text="{GENE}*: Gene not tested by at least one of the other method(s)",
-                        x=0,
-                        y=-15 / (height - 60),
-                        xref="paper",
-                        yref="paper",
-                        showarrow=False,
-                        align="left",
-                        valign="top",
-                        font=dict(size=12)
-                    )
-                ]
-            )
-        fig_tables[title_short] = fig_table
-    return fig_tables, all_titles
+        df_tables[title_short] = dfi
+
+    return df_tables
 
 def generate_dnds_comparison_dataframe(
         path_mutsig,
