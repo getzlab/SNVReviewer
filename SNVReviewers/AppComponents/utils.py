@@ -2789,11 +2789,7 @@ def plot_fdr_comparison(df, method1, method2, alp):
     >>> print(result[1]['Method_A and Method_B'])
     ['Gene1', 'Gene2', 'Gene3']
     """
-
     log10alp = -np.log10(alp)
-
-    #
-    # ASSEMBLE DATA FRAME
 
     # assemble data frame that will be plotted
     df_plot = df[['GENE']].copy()
@@ -2819,7 +2815,6 @@ def plot_fdr_comparison(df, method1, method2, alp):
 
     #
     # PRE-PROCESS DATA
-
     # displayed range
     xy_max = max([df_plot[f"{method1}: -log10(FDR) capped"].max(), df_plot[f"{method2}: -log10(FDR) capped"].max()]) * (
                 1 + xy_pad)
@@ -3008,6 +3003,7 @@ def plot_table_comparison(df, sig_genes_dict):
     """
     methods = [k.split(' ')[0] for k in list(sig_genes_dict.keys()) if 'only' in k]
     fig_tables = []
+    df_plot_list = []
 
     for key in sig_genes_dict:
         df_plot = df.loc[df.GENE.isin(sig_genes_dict[key])].copy().sort_values('RANK')
@@ -3020,19 +3016,8 @@ def plot_table_comparison(df, sig_genes_dict):
 
             print("Inside the plot_table_comparison function")
             table_annot = df_plot['SIG_' + method_other[0]].isna().sum() > 0
-
-            # DEBUGGING STARTED
-            # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] += '*', # original
-            print("this is what the df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] looks like")
-            print(df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'])
-            print("type of this line of code: df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] => ")
-            # print(type(df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE']))
-            print(any([isinstance(ele, (int, float)) for ele in df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE']]))
-            # DEBUGGING ENDED
-
             df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] + "*"
-            # replaces the nan values with *
-            # df_plot.loc[df_plot['SIG_' + method_other[0]].isna(), 'GENE'] = '*' # modified version
+        
         else:
             table_annot = False
         # formatting data in columns
@@ -3084,7 +3069,9 @@ def plot_table_comparison(df, sig_genes_dict):
                 ]
             )
         fig_tables.append(fig_table)
-    return fig_tables
+        df_plot_list.append(df_plot)
+
+    return df_plot_list
 
 def gen_dnds_summary_table(df, dropdown_menu_value):
     """
@@ -3223,44 +3210,16 @@ def gen_dnds_comparison_plot(
         methods_key,
         alp=0.1
     ):
-    # save the processed results to a TSV file
-    # df.to_csv(dir_output + '/' + ('' if (prefix_output is None) else prefix_output + '_') + 'merged_results.tsv', sep='\t', index=False)
-
-    # Generate HTML That Compares Pairs of Statistical Methods
-
-    # generate the dropdown options
-    # prepare plot data for all dropdown options
-    plot_data = {}
+    """ 
+    """
     methods_val = methods[methods_key]
-    # for methods_key, methods_val in methods.items():
     # generate FDR comparison plot
     comparison_fig, sig_genes_dict = plot_fdr_comparison(df, methods_val[0], methods_val[1], alp)
-    # generate table plot
-    fig_table = plot_table_comparison(df, sig_genes_dict)
-    # store plotly figures
-    plot_data[methods_key] = {
-        'fig': comparison_fig.to_dict(),
-    }
-    for i, fig_table_i in enumerate(fig_table):
-        plot_data[methods_key][f'table{i+1}'] = fig_table_i.to_dict()
-        
-        # tables = [table.to_dict('records') for table in fig_table]
 
-    # Generate static table of HTML:
-    # find significant genes w.r.t combined FDR
-    ind_sig = df['FDR_min'] <= alp
-    n_rows = max(n_rows_min, int(np.sum(ind_sig) * (1 + n_rows_buffer)))
-    df_table = df.iloc[:n_rows].copy()
+    # generates a list of dataframes that will have the data that will populate the comparison tables
+    df_plot_list = plot_table_comparison(df, sig_genes_dict)
 
-    # generate table figure
-    df_table = format_cols(df_table)
-    # making the significant rows bold
-    for i in range(df_table.shape[0]):
-        if ind_sig[i]:
-            df_table.loc[i, :] = '<b>' + df_table.loc[i, :].astype(str) + '</b>'
-
-    # returns (go.Figure, [go.Figure(go.Table), go.Figure(go.Table), go.Figure(go.Table)])
-    return comparison_fig, fig_table
+    return comparison_fig, df_plot_list
 
 
 # MUTSIG CODE

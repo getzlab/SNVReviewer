@@ -52,6 +52,10 @@ DNDSCV_REPORT_COLUMN_NAMES = ["RANK", "GENE", "N_SYN", "N_MIS", "N_NON", "N_SPL"
                               "dNdS_MIS", "dNdS_NON", "dNdS_SPL", "dNdS_IND", "PVAL_MIS",
                               "PVAL_TRUNC", "PVAL_IND", "PVAL", "FDR", "CGC", "PANCAN"]
 
+DNDSCV_COMPARISON_COLUMN_NAMES = ['RANK', 'GENE', 'SIZE_coding', 'PVAL_MutSig2', 'PVAL_dNdScv', 'PVAL_DIG', 
+                               'PVAL_comb', 'FDR_MutSig2', 'FDR_dNdScv', 'FDR_DIG', 'FDR_comb', 'SIG_MutSig2',
+                               'SIG_dNdScv', 'SIG_DIG', 'CGC', 'PANCAN']
+
 DNDSCV_SUMMARY_COLUMN_NAMES = ['RANK', 'GENE', 'SIZE_coding', 'PVAL_MutSig2', 'PVAL_dNdScv', 'PVAL_DIG', 
                                'PVAL_comb', 'FDR_MutSig2', 'FDR_dNdScv', 'FDR_DIG', 'FDR_comb', 'SIG_MutSig2',
                                'SIG_dNdScv', 'SIG_DIG', 'CGC', 'PANCAN']
@@ -77,7 +81,8 @@ def gen_dndscv_results_app_component(
     dnd_df_merged = dnd_df_merged.copy()
     dnd_df_global = dnd_df_global.copy()
     summary_table = go.Figure()
-    comparison_table = go.Figure()
+    # comparison_table = go.Figure()
+    comparison_table = pd.DataFrame().to_dict("records")
 
     qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
 
@@ -86,8 +91,12 @@ def gen_dndscv_results_app_component(
         # reformats the columns with float values in them
         if pd.api.types.is_float_dtype(dnd_df_plot[clm_nm]):
             dnd_df_plot[clm_nm] = reformat_numbers(dnd_df_plot[clm_nm], format='{:.3E}')
+
+    dnds_results_column_name = [
+        {"name":i, 
+         "id":i} for i in DNDSCV_REPORT_COLUMN_NAMES
+        ]
     
-    # NEED TO REFORMAT THE dnd_df_plot dataframe for 2 point decimal precision
     all_page_content = [
             # data to be displayed in the tables for the results dndscv report
             dnd_df_plot.to_dict('records'),
@@ -95,6 +104,10 @@ def gen_dndscv_results_app_component(
             comparison_table,
             comparison_table,
             summary_table, 
+
+            dnds_results_column_name,
+            dnds_results_column_name,
+            dnds_results_column_name,
 
             # result dndscv report figures
             qq_fig,
@@ -133,9 +146,6 @@ def gen_dndscv_results_app_component(
     return all_page_content
 
 def gen_dndscv_comparison_app_component(
-    dnd_df_plot,
-    dnd_df_merged,
-    dnd_df_global,
     dnd_df_comparison,
     dropdown_menu_value,
     dnd_radio_item_selection           
@@ -149,15 +159,33 @@ def gen_dndscv_comparison_app_component(
     empty_result_table = pd.DataFrame().to_dict('records')
     empty_summary_table = go.Figure()
 
-    comparison_fig, [comaprison_table1, comaprison_table2, comaprison_table3] = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
+    comparison_fig, [df_plot1, df_plot2, df_plot3] = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
+
+    dnds_comparison_column_names1 =[
+                            {"name": i,
+                            "id": i} for i in list(df_plot1.columns)
+                        ]
+    dnds_comparison_column_names2 =[
+                            {"name": i,
+                            "id": i} for i in list(df_plot2.columns)
+                        ]
+    dnds_comparison_column_names3 =[
+                            {"name": i,
+                            "id": i} for i in list(df_plot3.columns)
+                        ]
 
     all_page_content = [
         # data to be displayed in the tables for the comparison dndscv report
         empty_result_table,
-        comaprison_table1,
-        comaprison_table2,
-        comaprison_table3,
+        df_plot1.to_dict("records"),
+        df_plot2.to_dict("records"),
+        df_plot3.to_dict("records"),
         empty_summary_table,
+
+        # dnds comparison report type column names
+        dnds_comparison_column_names1,
+        dnds_comparison_column_names2,
+        dnds_comparison_column_names3,
 
         # comparison dndscv report figures
         empty_figure,
@@ -192,9 +220,9 @@ def gen_dndscv_comparison_app_component(
     return all_page_content
 
 def gen_dndscv_summary_app_component(
-    dnd_df_plot,
-    dnd_df_merged,
-    dnd_df_global,
+    # dnd_df_plot,
+    # dnd_df_merged,
+    # dnd_df_global,
     dnd_df_comparison,
     dropdown_menu_value,
     dnd_radio_item_selection       
@@ -204,7 +232,7 @@ def gen_dndscv_summary_app_component(
     debugging= ""
     all_page_content = []
     empty_figure = go.Figure()
-    
+    empty_comparison_table = pd.DataFrame().to_dict("records")
     summary_table1 = pd.DataFrame().to_dict('records')
 
     summary_tables, all_titles = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
@@ -212,15 +240,28 @@ def gen_dndscv_summary_app_component(
     summary_table_combined = summary_tables["MutSig2CV, dNdScv and DIG"]
     print("this is dropdown_menu_value: ", dropdown_menu_value)
     summary_table2 = summary_tables[dropdown_menu_value]
-    comparison_table = go.Figure()
+    
+    dnds_summary_column_names = [
+        {"name":i, 
+         "id":i} for i in DNDSCV_SUMMARY_COLUMN_NAMES
+    ]
 
     all_page_content = [
         # tables to display for the summary dNdScv report
         summary_table1,
-        summary_table_combined,
-        comparison_table,
-        comparison_table,
+        
+        # summary_table_combined,
+        # START OF THE DEBUGGING
+        empty_comparison_table,
+        # END OF THE DEBUGGING
+
+        empty_comparison_table,
+        empty_comparison_table,
         summary_table2,
+
+        dnds_summary_column_names,
+        dnds_summary_column_names,
+        dnds_summary_column_names,
 
         # no figures to display for the summary dNdScv report
         empty_figure,
