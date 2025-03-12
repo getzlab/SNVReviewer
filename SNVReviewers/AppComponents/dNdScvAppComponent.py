@@ -24,7 +24,7 @@ def gen_dNdScv_app_component_data_callback(
     idx,
     dnd_radio_item_selection,
     dnds_dropdown_value,
-    dnds_dropdowm_options # Dropdowm menu option State
+    # dnds_dropdowm_options # Dropdowm menu option State
 ):
     
 
@@ -370,9 +370,9 @@ def gen_dnd_scv_app_component():
         ],
         # gives the value to new_data_callback/internal_data_callback, 
         # the callback is not triggered but need to pass in the state after input parameters
-        callback_state=[
-            State('dnds-gene-dropdown', 'options')
-        ],
+        # callback_state=[
+        #     State('dnds-gene-dropdown', 'options')
+        # ],
 
         callback_output=[
             # dNdScv tables
@@ -407,7 +407,6 @@ def gen_dnd_scv_app_component():
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),
             Output('dnds-dropdowm-label', 'children'),
-
             Output('dnds-gene-dropdown', 'value'),
 
             Output('dnds-debugging', 'children'),

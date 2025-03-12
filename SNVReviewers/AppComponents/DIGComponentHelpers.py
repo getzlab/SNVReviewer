@@ -12,9 +12,8 @@ DIG_CODING_REGION_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'CHROM', 'LENGTH', "PVA
 DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                                     "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
 
-DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", 
-                                    #   "FDR",  # Figure out why this column is not being displayed!!
-                                      "OBS", 'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
+DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", "FDR", "OBS", 
+                                      'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
 
 CODING_REGION_MUT_DROPDOWN = [
                         {'label': 'Indels + Nonsynonymous SNVs', 'value': 'indels_nonsynonymous_snvs'},
@@ -301,16 +300,6 @@ def gen_non_coding_app_component(
         display_bounds_key = 'No'
 
     df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_bounds_key, p_val_type)
-    # columns_to_keep = [column_name for column_name in df_kept if 'FDR' in column_name or 'GENE' in column_name]
-
-    # gets the relevant FDR and GENE column
-    # df_new = df_kept[columns_to_keep].copy()
-    # merged_dig_df = df_kept.merge(df_new, on='GENE', how='outer', suffixes=('_left', '_right')) 
-
-    for clm in df_kept:
-        if 'FDR' in clm:
-            debugging = debugging + f"_{clm}"
-
     dig_data_columns = []
     
     for clm_nm in DIG_NON_CODING_REPORT_COLUMN_NAMES:
@@ -331,11 +320,8 @@ def gen_non_coding_app_component(
             elif 'SIZE' in clm_nm:
                 dig_data_clm_dict['id'] = 'ELT_SIZE'
 
-            # elif 'FDR' in clm_nm and non_coding_region_burden_type[burden_type]:
-            #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type] + "_" + scatterpoint_type[p_val_type]
-            
             elif 'FDR' in clm_nm:
-                dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+                dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type] +  "_" + scatterpoint_type[p_val_type]
             
             elif 'LENGTH' in clm_nm:
                 dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
@@ -354,25 +340,17 @@ def gen_non_coding_app_component(
         for column_dict in dig_data_columns:
             # gets the dig data column name
             column = column_dict["id"]
-
-            # # reformats the columns with float values in them
-            # if pd.api.types.is_float_dtype(merged_dig_df[column]) and column != 'RANK' and 'FDR' not in column:
-            #     merged_dig_df[column] = reformat_numbers(merged_dig_df[column], format='{:.3E}')
             
             # reformats the columns with float values in them
-            if pd.api.types.is_float_dtype(df_kept[column]) and column != 'RANK' and 'FDR' not in column:
+            if pd.api.types.is_float_dtype(df_kept[column]) and column != 'RANK':
                 df_kept[column] = reformat_numbers(df_kept[column], format='{:.3E}')
 
         # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
         # REMOVE THE DEBUGGING LATER!!! 
-        # dig_df = dig_df[:100]
-        # merged_dig_df = merged_dig_df[:100]
         df_kept = df_kept[:100]
 
     all_page_content =  [
-            # dig_df.to_dict('records'),
             df_kept.to_dict('records'),
-            # merged_dig_df.to_dict('records'),
             volcano_fig,
             qq_fig,
             fig_mu, 

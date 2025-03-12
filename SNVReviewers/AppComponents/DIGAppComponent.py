@@ -1,39 +1,25 @@
 from dash import dcc, html
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
 import dash_daq as daq
-
 from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 
 from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 import dash_bootstrap_components as dbc
-import plotly.graph_objects as go
-
-from AnnoMate.Data import Data, DataAnnotation
-from AnnoMate.ReviewDataApp import ReviewDataApp, AppComponent
+from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
-from cnv_suite.visualize import plot_acr_interactive
-
-from rpy2.robjects import r, pandas2ri
-import rpy2.robjects as robjects
-import os
-import pickle
-from typing import Union, List, Dict
-import sys
-from cnv_suite import calc_cn_levels
 import pandas as pd
-import numpy as np
 
 from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_non_coding_app_component
-from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type, non_coding_region_burden_type
+from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type
 
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
                     
 DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs", "Introns"]
+
 # Different DIG Dataframes
 DIG_COMBINED_DATAFRAME_IDX = 0
 DIG_PRIME3_DATAFRAME_IDX = 1
@@ -102,14 +88,6 @@ def gen_dig_app_component_data_internal_callback(
             p_val_type,
             display_bounds_value,
         )
-
-    # NEED TO FIGURE OUT HOW TO GET THE PROMOTER, 5 PRIME UTR REPORT TYPES WORKING
-        # LOOK AT THE WORKFLOW THAT DAVID SENT
-        # MIGHT NEED TO MAKE A SEPARATE LIST OF THE 5 DIFFERENT DATAFRAMES FOR ONE COHORT
-            # MIGHT NEED TO HAVE DIFFERENT DATA PASSED INTO THE DIFFERENT gen_xxx_app_component functions
-            # based on the data needed
-
-    # THEN START WORKING ON THE mutsig component and dndscv component
 
     elif dig_radio_item_selection == "Promoter region":
         # checking if you are changing to a new report type
