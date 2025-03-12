@@ -14,8 +14,7 @@ DIG_REPORT_COMBINED_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding"
 
 DIG_NON_CODING_REPORT_COLUMN_NAMES = ["RANK", "GENE", 'SIZE', "PVAL", 
                                     #   "FDR",  # Figure out why this column is not being displayed!!
-                                      "OBS", 
-                                      'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
+                                      "OBS", 'EXP', 'MU', 'SIGMA', 'FLAG', 'CGC', 'PANCAN']
 
 CODING_REGION_MUT_DROPDOWN = [
                         {'label': 'Indels + Nonsynonymous SNVs', 'value': 'indels_nonsynonymous_snvs'},
@@ -55,7 +54,7 @@ SHOW_QQ_SMALL_PLOT_STYLE = {'width':'600px'}
 HIDE_PLOT_STYLE = {'display':'none'}
 SHOW_VOLCANO_PLOT_STYLE = {'display':'inline-block', 'width':'600px'}
 SHOW_THREE_PLOTS_STYLE = {'display':'block', 'width':'350px'}
-SHOW_TWO_PLOTS_STYLE = {'display':'block', 'width':'350px'}
+SHOW_TWO_PLOTS_STYLE = {'display':'block', 'width':'600'}
 
 DIG_REPORT_VALUES = ["Combined", "Coding region", "Promoter region", "5-prime UTRs", "3-prime UTRs"]
 DIG_DATAFRAME_IDX = 0
@@ -276,8 +275,17 @@ def gen_non_coding_app_component(
     debugging=""
     all_page_content = []
     dig_df = dig_df.copy()
-    dig_df = dig_df.sort_values(by='PVAL'+ "_"+ combined_mutation_type[mutation_type] + "_" + coding_region_burden_type[burden_type])
-    dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
+    bad_mutation_burden_combination = [("indels_snvs", "sample_wise"), ("indels", "sample_wise")]
+
+    if (mutation_type, burden_type) not in bad_mutation_burden_combination:
+        column_to_sort_by = ""
+        
+        if burden_type == "sample_wise":
+            column_to_sort_by = 'PVAL'+ "_" + combined_mutation_type[mutation_type] + "_BURDEN"
+        else:
+            column_to_sort_by = 'PVAL'+ "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type]
+        dig_df = dig_df.sort_values(by=column_to_sort_by)
+        dig_df['RANK'] = np.array([i+1 for i in range(len(dig_df))])
 
     # initialize the plots for the 3 prime str report
     qq_fig = go.Figure()
@@ -293,13 +301,13 @@ def gen_non_coding_app_component(
         display_bounds_key = 'No'
 
     df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special = generate_dig_non_coding_plots(dig_df, mutation_type, burden_type, display_bounds_key, p_val_type)
-    columns_to_keep = [column_name for column_name in df_kept if 'FDR' in column_name or 'GENE' in column_name]
+    # columns_to_keep = [column_name for column_name in df_kept if 'FDR' in column_name or 'GENE' in column_name]
 
     # gets the relevant FDR and GENE column
-    df_new = df_kept[columns_to_keep].copy()
-    merged_dig_df = dig_df.merge(df_new, on='GENE', how='outer', suffixes=('_left', '_right')) 
+    # df_new = df_kept[columns_to_keep].copy()
+    # merged_dig_df = df_kept.merge(df_new, on='GENE', how='outer', suffixes=('_left', '_right')) 
 
-    for clm in merged_dig_df:
+    for clm in df_kept:
         if 'FDR' in clm:
             debugging = debugging + f"_{clm}"
 
@@ -310,51 +318,61 @@ def gen_non_coding_app_component(
         dig_data_clm_dict["name"] = clm_nm
         dig_data_clm_dict["id"] = clm_nm
 
-        if "PVAL" in clm_nm:
-            # gets the column name corresponding to the mutation type and the scatterpoint type
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type]
+        try:
+            if "PVAL" in clm_nm and burden_type != "sample_wise":
+                # gets the column name corresponding to the mutation type and the scatterpoint type
+                dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type]
+            elif "PVAL" in clm_nm:
+                dig_data_clm_dict["id"] = clm_nm + "_" + non_coding_region_burden_type[burden_type]
 
-        elif 'EXP' in clm_nm:
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
+            elif 'EXP' in clm_nm:
+                dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
 
-        elif 'SIZE' in clm_nm:
-            dig_data_clm_dict['id'] = 'ELT_SIZE'
+            elif 'SIZE' in clm_nm:
+                dig_data_clm_dict['id'] = 'ELT_SIZE'
 
-        # elif 'FDR' in clm_nm and non_coding_region_burden_type[burden_type]:
-        #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type] + "_" + scatterpoint_type[p_val_type]
-        
-        # elif 'FDR' in clm_nm:
-        #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
-        
-        elif 'LENGTH' in clm_nm:
-            dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
+            # elif 'FDR' in clm_nm and non_coding_region_burden_type[burden_type]:
+            #     dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + non_coding_region_burden_type[burden_type] + "_" + scatterpoint_type[p_val_type]
+            
+            elif 'FDR' in clm_nm:
+                dig_data_clm_dict["id"] = clm_nm + "_" + combined_mutation_type[mutation_type] + "_" + scatterpoint_type[p_val_type]
+            
+            elif 'LENGTH' in clm_nm:
+                dig_data_clm_dict['id'] = 'GENE_' +  clm_nm
 
-        elif 'OBS' in clm_nm and combined_mutation_type[mutation_type] != 'MUT' and combined_mutation_type[mutation_type] != 'dNdS':
-            dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
+            elif 'OBS' in clm_nm and combined_mutation_type[mutation_type] != 'MUT' and combined_mutation_type[mutation_type] != 'dNdS':
+                dig_data_clm_dict["id"] = clm_nm + "_"+ combined_mutation_type[mutation_type]
 
-        elif 'OBS' in clm_nm and mutation_type == 'indels_snvs':
-            dig_data_clm_dict["id"] = clm_nm + "_SAMPLES"    
+            elif 'OBS' in clm_nm and mutation_type == 'indels_snvs':
+                dig_data_clm_dict["id"] = clm_nm + "_SAMPLES"    
 
-        dig_data_columns.append(dig_data_clm_dict)
+            dig_data_columns.append(dig_data_clm_dict)
+        except KeyError as k:
+            print("experiencing key error with this column: ", clm_nm)
     
-    for column_dict in dig_data_columns:
-        # gets the dig data column name
-        column = column_dict["id"]
+    if len(df_kept):
+        for column_dict in dig_data_columns:
+            # gets the dig data column name
+            column = column_dict["id"]
 
-        # reformats the columns with float values in them
-        if pd.api.types.is_float_dtype(dig_df[column]) and column != 'RANK':
-            dig_df[column] = reformat_numbers(dig_df[column], format='{:.3E}')
+            # # reformats the columns with float values in them
+            # if pd.api.types.is_float_dtype(merged_dig_df[column]) and column != 'RANK' and 'FDR' not in column:
+            #     merged_dig_df[column] = reformat_numbers(merged_dig_df[column], format='{:.3E}')
+            
+            # reformats the columns with float values in them
+            if pd.api.types.is_float_dtype(df_kept[column]) and column != 'RANK' and 'FDR' not in column:
+                df_kept[column] = reformat_numbers(df_kept[column], format='{:.3E}')
 
-    # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
-    # REMOVE THE DEBUGGING LATER!!! 
-    # dig_df = dig_df[:100]
-    merged_dig_df = merged_dig_df[:100]
-    # dig_kept = dig_kept[:100]
+        # ONLY GETTING THE FIRST 100 ROWS OF DATA TO DISPLAY IN THE TABLE
+        # REMOVE THE DEBUGGING LATER!!! 
+        # dig_df = dig_df[:100]
+        # merged_dig_df = merged_dig_df[:100]
+        df_kept = df_kept[:100]
 
     all_page_content =  [
             # dig_df.to_dict('records'),
-            # df_kept.to_dict('records'),
-            merged_dig_df.to_dict('records'),
+            df_kept.to_dict('records'),
+            # merged_dig_df.to_dict('records'),
             volcano_fig,
             qq_fig,
             fig_mu, 

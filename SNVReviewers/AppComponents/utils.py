@@ -1,10 +1,8 @@
-import argparse
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
 import scipy as sp
 from statsmodels.stats.multitest import fdrcorrection
-import json
 import plotly.express as px
 
 # minimum number of rows (genes) to display in the table
@@ -141,11 +139,10 @@ scatterpoint_type = {
     "p_mid": "recalc"
 }
 
-
 # dictionaries for coding region the two dropdowns
 non_coding_region_burden_type = {
     'total': 'BURDEN',
-    'sample_wise': 'SAMPLE',
+    'sample_wise': 'SAMPLE_BURDEN',
 }
 
 def nb_pvalue_greater_midp(k, alpha, p):
@@ -414,6 +411,7 @@ def generate_combined_plot_data(df, mut, bur, display_bounds, scatterpoint):
     # Ensure no NaN values in the table
     # df_plot.fillna('NA', inplace=True)
     df_plot[['RANK', 'GENE', 'CGC', 'PANCAN']] = df_plot[['RANK', 'GENE', 'CGC', 'PANCAN']].astype(str)
+    
     # Generate table figure
     headerColor = 'grey'
     rowEvenColor = 'lightgrey'
@@ -448,7 +446,6 @@ def generate_combined_plot_data(df, mut, bur, display_bounds, scatterpoint):
                     fill_color=[[rowOddColor if i % 2 == 0 else rowEvenColor for i in range(df_plot.shape[0])]],
                     align=['left'] + ['center'] * (len(df_plot.columns)-1),
                     font=dict(color='darkslategray', size=11),
-                    # format = ['html'] * len(df_plot.columns)  # Enable HTML formatting
                     )
     )])
 
@@ -639,24 +636,10 @@ def generate_combined_dig_report_plots(df, mut_key, bur_key, display_bounds_key,
             )
         )
 
-        # # Save figures as separate data
-        # plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-        #     'qq': qq_fig.to_dict(),
-        #     'table': table_fig.to_dict(),
-        #     'text': bur_key + ' Mutation Burden of ' + mut_key,
-        #     'textcolor': 'black-text'
-        # }
     else:
         qq_fig = go.Figure()
         table_fig = go.Figure()
         text_special = SPECIAL_TEXT
-
-        # plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}_{display_labels_key}"] = {
-        #     'qq': None,
-        #     'table': None,
-        #     'text': SPECIAL_TEXT,
-        #     'textcolor': 'red-text'
-        # }
     
     return qq_fig, table_fig, text_special
 
@@ -1466,7 +1449,6 @@ def generate_non_coding_region_plot_data(
     df_kept = df.loc[ind_keep].copy()
 
     df_kept['LOGFC_' + mut + '_' + bur] = np.log2(df_kept[col_obs] / df_kept[col_exp] + 1)
-    # df_kept['FDR_' + mut + '_' + bur] = fdrcorrection(df_kept[col_pval])[1]
     df_kept['FDR_' + mut + '_' + bur + '_' + scatterpoint] = fdrcorrection(df_kept[col_pval + '_' + scatterpoint])[1]
 
     if display_bounds:
@@ -1859,27 +1841,17 @@ def generate_dig_non_coding_plots(df, mut_key, bur_key, display_bounds_key, scat
             template='plotly_white'
         )
 
-        # Save figures as separate data
-        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}"] = {
-            'volcano': volcano_fig.to_dict(),
-            'qq': qq_fig.to_dict(),
-            'table': table_fig.to_dict(),
-            'text': bur_key + ' Mutation Burden of ' + mut_key,
-            'textcolor': 'black-text'
-        }
     else:
-        plot_data[f"{mut_key}_{bur_key}_{display_bounds_key}_{scatterpoint_key}"] = {
-            'volcano': None,
-            'qq': None,
-            'dnds': None,
-            'table': None,
-            'text': SPECIAL_TEXT,
-            'textcolor': 'red-text'
-        }
+    
+        df_kept = pd.DataFrame() 
+        volcano_fig = go.Figure() 
+        qq_fig = go.Figure() 
+        fig_mu = go.Figure() 
+        fig_sigma = go.Figure()
+        table_fig = go.Figure()
         text_special = SPECIAL_TEXT
 
-    # # convert plot data to JSON-like structure
-    # plot_data_json = json.dumps(plot_data)
+        return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special
 
     # generate static figures for the default values
     fig_mu = px.histogram(df_kept,
@@ -1908,7 +1880,7 @@ def generate_dig_non_coding_plots(df, mut_key, bur_key, display_bounds_key, scat
 
     return df_kept, volcano_fig, qq_fig, fig_mu, fig_sigma, table_fig, text_special
 
-# dNdScv REPORT CODE
+# dNdScv report code
 
 # dropdown options: number of genes to display in the scatter plots
 # minimum number of rows (genes) to display in the table
