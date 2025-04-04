@@ -57,15 +57,17 @@ class SNVReviewer(ReviewerTemplate):
             Minimum increment allowed for purity (default is 0.01)
         """
         app = ReviewDataApp()
-        
+        # Need to put the dNdScv component first
+        app.add_component(
+            gen_dnd_scv_app_component()
+        )
+
         # Adds the DIG report component to the SNV Reviewer
         app.add_component(
             gen_dig_report_app_component()
         )
 
-        app.add_component(
-            gen_dnd_scv_app_component()
-        )
+        
 
         app.add_component(
             gen_mutsig_app_component()
