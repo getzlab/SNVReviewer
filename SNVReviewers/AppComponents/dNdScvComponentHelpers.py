@@ -5,7 +5,7 @@ import numpy as np
 from SNVReviewers.AppComponents.utils import reformat_numbers
 import pandas as pd
 import numpy as np
-from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot
+from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot, gen_table_conditional_styling
 
 RESULTS_DROPDOWN_OPTIONS = [
     {'label':'All', 'value': 'all'},
@@ -64,6 +64,7 @@ DNDSCV_SUMMARY_COLUMN_NAMES = ['RANK', 'GENE', 'SIZE_coding', 'PVAL_MutSig2', 'P
 DNDS_RESULTS_DROPDOWM_LABEL = 'Select Number of Significant Gene Labels to Display:'
 DNDS_COMPARISON_DROPDOWM_LABEL = 'Tools to compare:'
 DNDS_SUMMARY_DROPDOWM_LABEL = 'List genes significant with:'
+NO_CONDITIONAL_STYLING = []
 
 # dNdScv dataframe and plot generation
 def gen_dndscv_results_app_component(
@@ -83,7 +84,8 @@ def gen_dndscv_results_app_component(
     summary_table = pd.DataFrame().to_dict("records")
     comparison_table = pd.DataFrame().to_dict("records")
 
-    qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
+    qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot, signficant_boolean_values = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
+    signficant_idxs = np.where(signficant_boolean_values)[0]
 
     for clm_nm in DNDSCV_REPORT_COLUMN_NAMES:
         
@@ -99,6 +101,8 @@ def gen_dndscv_results_app_component(
         {"name":i, 
          "id":i} for i in DNDSCV_SUMMARY_COLUMN_NAMES
     ]
+
+    conditional_styling = gen_table_conditional_styling(signficant_idxs)
     
     all_page_content = [
             # data to be displayed in the tables for the results dndscv report
@@ -134,6 +138,13 @@ def gen_dndscv_results_app_component(
             HIDE_TABLE_STYLE,
             HIDE_TABLE_STYLE,
             HIDE_TABLE_STYLE,
+
+            # result dndscv report table conditional styling
+            conditional_styling,
+            NO_CONDITIONAL_STYLING,
+            NO_CONDITIONAL_STYLING,
+            NO_CONDITIONAL_STYLING,
+            NO_CONDITIONAL_STYLING,
             
             # result dndscv dropdown menu values and labels
             dnd_radio_item_selection,
@@ -164,7 +175,7 @@ def gen_dndscv_comparison_app_component(
     empty_result_table = pd.DataFrame().to_dict('records')
     empty_summary_table = pd.DataFrame().to_dict("records")
 
-    comparison_fig, [df_plot1, df_plot2, df_plot3] = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
+    comparison_fig, [df_plot1, df_plot2, df_plot3], df_significance = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
 
     dnds_comparison_column_names1 =[
                             {"name": i,
@@ -183,6 +194,38 @@ def gen_dndscv_comparison_app_component(
         {"name":i, 
          "id":i} for i in DNDSCV_SUMMARY_COLUMN_NAMES
     ]
+
+    for clm_nm in df_plot1.columns:
+        debugging = debugging + "/" + clm_nm
+
+    significant_idxs = np.where(((df_significance['Significant'].str.contains('both')) | (df_significance['Significant'].str.contains('only'))) )[0]
+    # significant_idxs2 = np.where(~df_plot2['Significant'].str.contains('neither'))[0]
+    # significant_idxs3 = np.where(~df_plot3['Significant'].str.contains('neither'))[0]
+    debugging = f"{type(significant_idxs)}"
+    print("")
+    
+    comparison_table_conditional_styling1 = gen_table_conditional_styling(significant_idxs)
+    comparison_table_conditional_styling2 = gen_table_conditional_styling(significant_idxs)
+    comparison_table_conditional_styling3 = gen_table_conditional_styling(significant_idxs)
+
+    # DEBUGGING MAKING SURE THAT THE HIGHLIGHTING/BOLDING WORKS!!!
+    comparison_table_conditional_styling1 = [
+            # bolds rows corresponding to genes that are significant
+            {
+                'if': {
+                    'row_index': [0, 1, 2, 3]
+                },
+                'fontWeight': 'bold',  # Bold the font
+            },
+
+            # highlights rows corresponding to genes that are significant
+            {
+                'if': {
+                    'row_index': [0, 1, 2, 3]
+                },
+                'backgroundColor': 'yellow',  
+            },
+        ]
 
     all_page_content = [
         # data to be displayed in the tables for the comparison dndscv report
@@ -219,6 +262,13 @@ def gen_dndscv_comparison_app_component(
         SHOW_TABLE_STYLE,
         HIDE_TABLE_STYLE,
 
+        # comparison dndscv report table conditional styling
+        NO_CONDITIONAL_STYLING,
+        comparison_table_conditional_styling1,
+        comparison_table_conditional_styling2,
+        comparison_table_conditional_styling3,
+        NO_CONDITIONAL_STYLING,
+
         # comparison dndscv dropdown menu values and labels
         dnd_radio_item_selection,
         COMPARISON_DROPDOWN_OPTIONS,
@@ -244,9 +294,10 @@ def gen_dndscv_summary_app_component(
     summary_table1 = pd.DataFrame().to_dict('records')
 
     df_summary_tables = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
-
     summary_table_combined = df_summary_tables["MutSig2CV, dNdScv and DIG"]
+
     print("this is dropdown_menu_value: ", dropdown_menu_value)
+
     summary_table2 = df_summary_tables[dropdown_menu_value]
 
     dnds_comparison_column_names = [
@@ -258,6 +309,11 @@ def gen_dndscv_summary_app_component(
         {"name":i, 
          "id":i} for i in list(summary_table_combined.columns)
     ]
+    
+    for clm_nm in summary_table_combined.columns:
+        if 'FDR' in clm_nm:
+            summary_table_conditional_styling = gen_table_conditional_styling(clm_nm, 0.1)
+     
 
     all_page_content = [
         # tables to display for the summary dNdScv report
@@ -293,6 +349,13 @@ def gen_dndscv_summary_app_component(
         HIDE_TABLE_STYLE,
         HIDE_TABLE_STYLE,
         SHOW_TABLE_STYLE,
+
+        # summary dndscv report table conditional styling
+        NO_CONDITIONAL_STYLING,
+        summary_table_conditional_styling,
+        NO_CONDITIONAL_STYLING,
+        NO_CONDITIONAL_STYLING,
+        summary_table_conditional_styling,
 
         # summary dndscv dropdown menu values and labels
         dnd_radio_item_selection,

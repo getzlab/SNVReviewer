@@ -11,7 +11,7 @@ from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import gen_dndscv_results_app_component, gen_dndscv_comparison_app_component, gen_dndscv_summary_app_component
 from SNVReviewers.AppComponents.DIGAppComponent import DND_PLOT_DATAFRAME_IDX, DND_MERGED_DATAFRAME_IDX, DND_GLOBAL_DATAFRAME_IDX, DND_COMPARISON_DATAFRAME_IDX
-from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
+from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME, PAGE_SIZE
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS, COMPARISON_DROPDOWN_OPTIONS, SUMMARY_DROPDOWN_OPTIONS, DNDSCV_REPORT_COLUMN_NAMES, DNDSCV_COMPARISON_COLUMN_NAMES, DNDSCV_SUMMARY_COLUMN_NAMES
 
 import pandas as pd
@@ -78,9 +78,6 @@ def gen_dNdScv_app_component_data_callback(
             dnds_dropdown_value = "MutSig2CV, dNdScv and DIG"
 
         all_page_content = gen_dndscv_summary_app_component(
-                # dnd_df_plot,
-                # dnd_df_merged,
-                # dnd_df_global,
                 dnd_df_comparison,
                 dnds_dropdown_value,
                 dnd_radio_item_selection
@@ -175,12 +172,13 @@ def gen_dNdScv_app_component_layout():
                             selected_rows=[0],
                             page_action="native",
                             page_current=0,
-                            page_size=5,
+                            page_size=PAGE_SIZE,
                         
                             # changing the width of the data table to 
                             style_table={
                                 'display':"none"
                                 },
+                            style_data_conditional=[]
                         ),
                     ]
                 ),
@@ -208,12 +206,13 @@ def gen_dNdScv_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5,
+                        page_size=PAGE_SIZE,
                     
                         # changing the width of the data table to 
                         style_table={
                             'display':"none"
                             },
+                        style_data_conditional=[]
                         ),
                     ]
                 ),
@@ -242,12 +241,13 @@ def gen_dNdScv_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5,
+                        page_size=PAGE_SIZE,
                     
                         # changing the width of the data table to 
                         style_table={
                             'display':"none"
                             },
+                        style_data_conditional=[]
                         ),
                     ]
                 ),
@@ -275,7 +275,7 @@ def gen_dNdScv_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5,
+                        page_size=PAGE_SIZE,
                     
                         # changing the width of the data table to 
                         style_table={
@@ -283,6 +283,7 @@ def gen_dNdScv_app_component_layout():
                             'maxWidth': '100%',  # Ensure it doesn’t go beyond the screen width
                             'overflowX': 'auto',  # Allow horizontal scroll if necessary
                             },
+                        style_data_conditional=[]
                         ),
                     ]
                 ),
@@ -306,12 +307,13 @@ def gen_dNdScv_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5,
+                        page_size=PAGE_SIZE,
                     
                         # changing the width of the data table to 
                         style_table={
                             'display':"none"
                             },
+                        style_data_conditional=[]
                         ),
                     ]
                 ),
@@ -385,13 +387,19 @@ def gen_dnd_scv_app_component():
             Output('dnds-truncating-graph', 'style'),
             Output('dnds-comparison-graph', 'style'),
 
-            # dNdScv table display
+            # dNdScv table styling for sizing, hiding, or displaying tables
             Output('dnds-report-table', 'style_table'),
             Output('dnds-comparison-table1', 'style_table'),
             Output('dnds-comparison-table2', 'style_table'),
             Output('dnds-comparison-table3', 'style_table'),
-            # Output('dnds-summary-table', 'style'),
             Output('dnds-summary-table', 'style_table'),
+
+            # dNdScv table conditional styling of data for significant genes
+            Output('dnds-report-table', 'style_data_conditional'),
+            Output('dnds-comparison-table1', 'style_data_conditional'),
+            Output('dnds-comparison-table2', 'style_data_conditional'),
+            Output('dnds-comparison-table3', 'style_data_conditional'),
+            Output('dnds-summary-table', 'style_data_conditional'),
 
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),

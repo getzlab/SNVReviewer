@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 
 from AnnoMate.ReviewDataApp import AppComponent
 from AnnoMate.DataTypes.GenericData import GenericData
-from SNVReviewers.AppComponents.DIGAppComponent import MUTSIG_DATAFRAME_IDX
+from SNVReviewers.AppComponents.DIGAppComponent import MUTSIG_DATAFRAME_IDX, PAGE_SIZE
 from SNVReviewers.AppComponents.DIGAppComponent import SNV_DATA_COLUMN_NAME
 from SNVReviewers.AppComponents.dNdScvComponentHelpers import RESULTS_DROPDOWN_OPTIONS
 from SNVReviewers.AppComponents.MutSigComponentHelpers import gen_mutsig_results_app_component, MUTSIG_REPORT_COLUMN_NAMES
@@ -99,7 +99,7 @@ def gen_mutsig_app_component_layout():
                             selected_rows=[0],
                             page_action="native",
                             page_current=0,
-                            page_size=15,
+                            page_size=PAGE_SIZE,
                         
                             # changing the width of the data table to 
                             style_table={

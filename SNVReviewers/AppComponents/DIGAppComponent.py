@@ -15,6 +15,7 @@ import pandas as pd
 from SNVReviewers.AppComponents.DIGComponentHelpers import gen_combined_app_component, gen_coding_region_app_component, gen_non_coding_app_component
 from SNVReviewers.AppComponents.utils import coding_region_mutation_type, combined_mutation_type
 
+PAGE_SIZE = 10
 DIG_REPORT_COLUMN_NAMES = ["RANK", "GENE", "FDR", "PVAL", "PVAL_coding", "PVAL_promoter", "PVAL_5utr", 
                            "SIZE_coding", "SIZE_promoter", "SIZE_5utr", "SIZE_3utr", "CGC", "PANCAN"]
                     
@@ -282,7 +283,7 @@ def gen_dig_app_component_layout():
                         selected_rows=[0],
                         page_action="native",
                         page_current=0,
-                        page_size=5,
+                        page_size=PAGE_SIZE,
                     
                         # changing the width of the data table to 
                         style_table={
