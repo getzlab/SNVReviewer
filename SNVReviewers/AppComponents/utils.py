@@ -228,27 +228,23 @@ def nb_pvalue_uniform_midp(k, alpha, p):
     """
     return np.random.uniform(size=k.shape) * sp.stats.nbinom.pmf(k, alpha, p) + sp.special.betainc(k + 1, alpha, 1 - p)
 
-def gen_table_conditional_styling(significant_indices):
+def gen_table_conditional_styling(column_name, significant_indices):
     """
     Generates the conditional styling for data tables
     """
     style_data_conditional = [
-            # bolds rows corresponding to genes that are significant
+            # bolds, highlights, and changes text color to red for each row corresponding to a significaqnt genes
             {
                 'if': {
-                    'row_index': significant_indices
+                    'filter_query': '{{RANK}} = "{}"'.format(sig_idx+1),
+                    'column_id': 'GENE'
                 },
                 'fontWeight': 'bold',  # Bold the font
                 'color': 'red',
-            },
+                'backgroundColor': 'yellow'
+            }
 
-            # highlights rows corresponding to genes that are significant
-            {
-                'if': {
-                    'row_index': significant_indices
-                },
-                'backgroundColor': 'yellow',  
-            },
+            for sig_idx in significant_indices
         ]
     
     return style_data_conditional
@@ -1337,11 +1333,9 @@ def generate_dnds_report(
         template='plotly_white'
     )
 
-    #
     # Missense dNdS Plot
     fig_dnds_mis = plot_dnds(df_merged, 'mis', 'missense', alp, alp_nearsig)
 
-    #
     # Truncating dNdS Plot
     fig_dnds_tru = plot_dnds(df_merged, 'tru', 'truncating', alp, alp_nearsig)
 
@@ -1385,7 +1379,7 @@ def generate_dnds_report(
                 )
             ])
     
-    return qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot, i_ncapped
+    return qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot, ind_sig
 
 
 # CODE FOR COMPARISON dNdScv report

@@ -24,6 +24,7 @@ def gen_dNdScv_app_component_data_callback(
     idx,
     dnd_radio_item_selection,
     dnds_dropdown_value,
+    report_table_selected_row
 ):
     
 
@@ -58,7 +59,8 @@ def gen_dNdScv_app_component_data_callback(
                 dnd_df_merged,
                 dnd_df_global,
                 dnds_dropdown_value,
-                dnd_radio_item_selection
+                dnd_radio_item_selection, 
+                report_table_selected_row
         )
     
     elif dnd_radio_item_selection == "Comparison":
@@ -69,7 +71,8 @@ def gen_dNdScv_app_component_data_callback(
         all_page_content = gen_dndscv_comparison_app_component(
                 dnd_df_comparison,
                 dnds_dropdown_value,
-                dnd_radio_item_selection
+                dnd_radio_item_selection,
+                report_table_selected_row
         )
         
     elif dnd_radio_item_selection == "Summary":
@@ -80,7 +83,8 @@ def gen_dNdScv_app_component_data_callback(
         all_page_content = gen_dndscv_summary_app_component(
                 dnd_df_comparison,
                 dnds_dropdown_value,
-                dnd_radio_item_selection
+                dnd_radio_item_selection,
+                report_table_selected_row
         )
 
     return all_page_content
@@ -122,10 +126,7 @@ def gen_dNdScv_app_component_layout():
                     
                 ]),
 
-                # REMOVE LATER!!!
-                html.Div([
-                    dbc.Label(id="dnds-special-text-output", children=""),
-                ]),
+                
                 # Graphs above the coding region table
                 dbc.Row([                    
                     dbc.Col([
@@ -144,9 +145,12 @@ def gen_dNdScv_app_component_layout():
                     ]),
                 ])
             ]),
+            html.Div([
+                    dbc.Label(id="dnds-special-text-output", children="{Gene}*: Gene not test by other test"),
+                ]),
 
             html.Div([
-                    dbc.Label("")
+                    dbc.Label(id="comparison-table-label1",children="")
                 ]),
 
             html.Div(
@@ -182,8 +186,9 @@ def gen_dNdScv_app_component_layout():
                         ),
                     ]
                 ),
+                
                 html.Div([
-                    dbc.Label("")
+                    dbc.Label(id="comparison-table-label2",children="")
                 ]),
 
                 html.Div(
@@ -218,7 +223,7 @@ def gen_dNdScv_app_component_layout():
                 ),
 
                 html.Div([
-                    dbc.Label("")
+                    dbc.Label(id="comparison-table-label3",children="")
                 ]),
 
                 html.Div(
@@ -252,7 +257,7 @@ def gen_dNdScv_app_component_layout():
                     ]
                 ),
                 html.Div([
-                    dbc.Label("")
+                    dbc.Label(id="report-table-label",children="")
                 ]),
                 # displays a table for the dig report
                 html.Div(
@@ -287,6 +292,9 @@ def gen_dNdScv_app_component_layout():
                         ),
                     ]
                 ),
+                html.Div([
+                    dbc.Label(id="summary-table-label",children="")
+                ]),
                 html.Div(
                     children=[
                         dash_table.DataTable(
@@ -316,6 +324,20 @@ def gen_dNdScv_app_component_layout():
                         style_data_conditional=[]
                         ),
                     ]
+                ),
+
+                html.Div(
+                    dbc.Label(children="Click to search more about the selected gene"),
+                    
+                    # 
+                    # html.A(
+                    #     id="gene-summary-link",
+                    #     href="",
+                    #     target="_blank",  # Open link in a new tab
+                    #     style={'fontSize': '20px', 'color': 'blue'}
+                    
+                    # )
+
                 ),
                 # Graphs below the coding region table
                 dbc.Row([
@@ -354,7 +376,8 @@ def gen_dnd_scv_app_component():
         internal_callback=gen_dNdScv_app_component_data_callback,
         callback_input=[
             Input('dnds-report-type-radioitems', 'value'),
-            Input('dnds-gene-dropdown', 'value')
+            Input('dnds-gene-dropdown', 'value'),
+            Input("dnds-report-table", "selected_rows"),
         ],
         
         callback_output=[
@@ -367,7 +390,6 @@ def gen_dnd_scv_app_component():
             Output('dnds-summary-table', 'data'),
 
             # updates the columns for the comparison tables
-            # Output('dnds-report-table', 'columns'),
             Output('dnds-comparison-table1', 'columns'),
             Output('dnds-comparison-table2', 'columns'),
             Output('dnds-comparison-table3', 'columns'),
@@ -401,10 +423,19 @@ def gen_dnd_scv_app_component():
             Output('dnds-comparison-table3', 'style_data_conditional'),
             Output('dnds-summary-table', 'style_data_conditional'),
 
+            # dNdScv table labels
+            Output("report-table-label", "children"),
+            Output("comparison-table-label1", "children"),
+            Output("comparison-table-label2", "children"),
+            Output("comparison-table-label3", "children"),
+            Output("summary-table-label", "children"),
+
             Output('dnds-special-text-output', 'children'),
             Output('dnds-gene-dropdown', 'options'),
             Output('dnds-dropdowm-label', 'children'),
             Output('dnds-gene-dropdown', 'value'),
+
+            # Output("gene-summary-link", "href"),
 
             Output('dnds-debugging', 'children'),
         ],

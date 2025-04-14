@@ -65,6 +65,8 @@ DNDS_RESULTS_DROPDOWM_LABEL = 'Select Number of Significant Gene Labels to Displ
 DNDS_COMPARISON_DROPDOWM_LABEL = 'Tools to compare:'
 DNDS_SUMMARY_DROPDOWM_LABEL = 'List genes significant with:'
 NO_CONDITIONAL_STYLING = []
+NO_TABLE_HEADING_LABEL = ""
+COMPARISON_TABLE_HEADING_LABEL = "Significant with "
 
 # dNdScv dataframe and plot generation
 def gen_dndscv_results_app_component(
@@ -72,7 +74,8 @@ def gen_dndscv_results_app_component(
     dnd_df_merged,
     dnd_df_global,
     num_gene_values,
-    dnd_radio_item_selection
+    dnd_radio_item_selection,
+    report_table_selected_row
 ):
     """ 
     """
@@ -83,10 +86,19 @@ def gen_dndscv_results_app_component(
     dnd_df_global = dnd_df_global.copy()
     summary_table = pd.DataFrame().to_dict("records")
     comparison_table = pd.DataFrame().to_dict("records")
+    selected_idx = report_table_selected_row[0]
+    gene_name = dnd_df_plot.loc[selected_idx, "GENE"]
 
+    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
+
+
+    # ADD IN ANOTHER COLUMN FOR THAT HAS A LINK TO A GOOGLE SEARCH FOR EACH GENE
     qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot, signficant_boolean_values = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
-    signficant_idxs = np.where(signficant_boolean_values)[0]
+    signficant_idxs = np.where(dnd_df_plot["FDR"]*100000000 < 10000000)[0]
 
+    for i in range(len(signficant_idxs)):
+        debugging = debugging + "/" + str(signficant_idxs[i])
+    
     for clm_nm in DNDSCV_REPORT_COLUMN_NAMES:
         
         # reformats the columns with float values in them
@@ -101,8 +113,8 @@ def gen_dndscv_results_app_component(
         {"name":i, 
          "id":i} for i in DNDSCV_SUMMARY_COLUMN_NAMES
     ]
-
-    conditional_styling = gen_table_conditional_styling(signficant_idxs)
+    column_name = 'RANK'
+    conditional_styling = gen_table_conditional_styling(column_name, signficant_idxs)
     
     all_page_content = [
             # data to be displayed in the tables for the results dndscv report
@@ -146,11 +158,20 @@ def gen_dndscv_results_app_component(
             NO_CONDITIONAL_STYLING,
             NO_CONDITIONAL_STYLING,
             
+            # results dndscv report table heading labels
+            NO_TABLE_HEADING_LABEL,
+            NO_TABLE_HEADING_LABEL,
+            NO_TABLE_HEADING_LABEL,
+            NO_TABLE_HEADING_LABEL,
+            NO_TABLE_HEADING_LABEL,
+            
             # result dndscv dropdown menu values and labels
             dnd_radio_item_selection,
             RESULTS_DROPDOWN_OPTIONS,
             DNDS_RESULTS_DROPDOWM_LABEL,
             num_gene_values,
+
+            # url,
 
             debugging
         ]
@@ -164,7 +185,8 @@ def gen_dndscv_results_app_component(
 def gen_dndscv_comparison_app_component(
     dnd_df_comparison,
     dropdown_menu_value,
-    dnd_radio_item_selection           
+    dnd_radio_item_selection,
+    report_table_selected_row           
 ):
     """ 
     """
@@ -174,6 +196,9 @@ def gen_dndscv_comparison_app_component(
     comparison_fig = go.Figure()
     empty_result_table = pd.DataFrame().to_dict('records')
     empty_summary_table = pd.DataFrame().to_dict("records")
+    selected_idx = 0 # DEBUGGING REMOVE LATER!!!
+    gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
+    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
 
     comparison_fig, [df_plot1, df_plot2, df_plot3], df_significance = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
 
@@ -197,35 +222,18 @@ def gen_dndscv_comparison_app_component(
 
     for clm_nm in df_plot1.columns:
         debugging = debugging + "/" + clm_nm
-
+    dropdown_menu_value_list = list(dropdown_menu_value.split(" "))
     significant_idxs = np.where(((df_significance['Significant'].str.contains('both')) | (df_significance['Significant'].str.contains('only'))) )[0]
     # significant_idxs2 = np.where(~df_plot2['Significant'].str.contains('neither'))[0]
     # significant_idxs3 = np.where(~df_plot3['Significant'].str.contains('neither'))[0]
     debugging = f"{type(significant_idxs)}"
-    print("")
-    
-    comparison_table_conditional_styling1 = gen_table_conditional_styling(significant_idxs)
-    comparison_table_conditional_styling2 = gen_table_conditional_styling(significant_idxs)
-    comparison_table_conditional_styling3 = gen_table_conditional_styling(significant_idxs)
-
-    # DEBUGGING MAKING SURE THAT THE HIGHLIGHTING/BOLDING WORKS!!!
-    comparison_table_conditional_styling1 = [
-            # bolds rows corresponding to genes that are significant
-            {
-                'if': {
-                    'row_index': [0, 1, 2, 3]
-                },
-                'fontWeight': 'bold',  # Bold the font
-            },
-
-            # highlights rows corresponding to genes that are significant
-            {
-                'if': {
-                    'row_index': [0, 1, 2, 3]
-                },
-                'backgroundColor': 'yellow',  
-            },
-        ]
+    column_name = 'RANK'
+    comparison_table_conditional_styling1 = gen_table_conditional_styling(column_name, significant_idxs)
+    comparison_table_conditional_styling2 = gen_table_conditional_styling(column_name, significant_idxs)
+    comparison_table_conditional_styling3 = gen_table_conditional_styling(column_name, significant_idxs)
+    comparison_table_label1 = COMPARISON_TABLE_HEADING_LABEL + f"{dropdown_menu_value_list[0]} and {dropdown_menu_value_list[-1]}"
+    comparison_table_label2 = COMPARISON_TABLE_HEADING_LABEL + f"{dropdown_menu_value_list[0]} only"
+    comparison_table_label3 = COMPARISON_TABLE_HEADING_LABEL + f"{dropdown_menu_value_list[-1]} only"
 
     all_page_content = [
         # data to be displayed in the tables for the comparison dndscv report
@@ -269,11 +277,20 @@ def gen_dndscv_comparison_app_component(
         comparison_table_conditional_styling3,
         NO_CONDITIONAL_STYLING,
 
+        # comparison dndscv report table heading labels
+        NO_TABLE_HEADING_LABEL,
+        comparison_table_label1,
+        comparison_table_label2,
+        comparison_table_label3,
+        NO_TABLE_HEADING_LABEL,
+
         # comparison dndscv dropdown menu values and labels
         dnd_radio_item_selection,
         COMPARISON_DROPDOWN_OPTIONS,
         DNDS_COMPARISON_DROPDOWM_LABEL,
         dropdown_menu_value,
+
+        # url, 
 
         debugging
     ]
@@ -283,7 +300,8 @@ def gen_dndscv_comparison_app_component(
 def gen_dndscv_summary_app_component(
     dnd_df_comparison,
     dropdown_menu_value,
-    dnd_radio_item_selection       
+    dnd_radio_item_selection,
+    report_table_selected_row       
 ):
     """
     """
@@ -292,6 +310,9 @@ def gen_dndscv_summary_app_component(
     empty_figure = go.Figure()
     empty_comparison_table = pd.DataFrame().to_dict("records")
     summary_table1 = pd.DataFrame().to_dict('records')
+    selected_idx = 0 # DEBUGGING REMOVE LATER!!!
+    gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
+    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
 
     df_summary_tables = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
     summary_table_combined = df_summary_tables["MutSig2CV, dNdScv and DIG"]
@@ -312,8 +333,13 @@ def gen_dndscv_summary_app_component(
     
     for clm_nm in summary_table_combined.columns:
         if 'FDR' in clm_nm:
-            summary_table_conditional_styling = gen_table_conditional_styling(clm_nm, 0.1)
-     
+            summary_table_conditional_styling = gen_table_conditional_styling('RANK', [1])
+
+    column_name = 'RANK'
+    summary_table_conditional_styling = gen_table_conditional_styling(column_name, [1, 10])
+
+    comparison_table_label1 = COMPARISON_TABLE_HEADING_LABEL + "MutSig2CV, dNdScv and DIG"
+    comparison_table_label2 = COMPARISON_TABLE_HEADING_LABEL + dropdown_menu_value
 
     all_page_content = [
         # tables to display for the summary dNdScv report
@@ -357,11 +383,20 @@ def gen_dndscv_summary_app_component(
         NO_CONDITIONAL_STYLING,
         summary_table_conditional_styling,
 
+        # summary dndscv report table heading labels
+        NO_TABLE_HEADING_LABEL,
+        comparison_table_label1,
+        NO_TABLE_HEADING_LABEL,
+        NO_TABLE_HEADING_LABEL,
+        comparison_table_label2,
+
         # summary dndscv dropdown menu values and labels
         dnd_radio_item_selection,
         SUMMARY_DROPDOWN_OPTIONS,
         DNDS_SUMMARY_DROPDOWM_LABEL,
         dropdown_menu_value,
+
+        # url,
 
         debugging
     ]

@@ -39,6 +39,7 @@ setuptools.setup(
                         'scipy',
                         # 'git+https://github.com/getzlab/dig_TOOL.git',
                         'git+https://github.com/getzlab/MutationReviewer.git'
+                        'pybiomart'
 
                        ]
 )   
