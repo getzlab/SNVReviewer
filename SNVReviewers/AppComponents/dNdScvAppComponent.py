@@ -327,17 +327,17 @@ def gen_dNdScv_app_component_layout():
                 ),
 
                 html.Div(
-                    dbc.Label(children="Click to search more about the selected gene"),
-                    
+                    children=[
+                    dbc.Label(children="GENE Summary PLACEHOLDER", id="gene-description-box"),
                     # 
-                    # html.A(
-                    #     id="gene-summary-link",
-                    #     href="",
-                    #     target="_blank",  # Open link in a new tab
-                    #     style={'fontSize': '20px', 'color': 'blue'}
-                    
-                    # )
-
+                    dcc.Link(
+                        "Learn more about selected Gene", 
+                        href="",
+                        target="_blank",  # Open link in a new tab
+                        id="gene-summary-link",
+                        style={'fontSize': '20px', 'color': 'blue'}
+                    )
+                    ]
                 ),
                 # Graphs below the coding region table
                 dbc.Row([
@@ -435,7 +435,9 @@ def gen_dnd_scv_app_component():
             Output('dnds-dropdowm-label', 'children'),
             Output('dnds-gene-dropdown', 'value'),
 
-            # Output("gene-summary-link", "href"),
+            Output("gene-summary-link", "href"),
+            Output("gene-summary-link", "children"),
+            Output("gene-description-box", "children"),
 
             Output('dnds-debugging', 'children'),
         ],

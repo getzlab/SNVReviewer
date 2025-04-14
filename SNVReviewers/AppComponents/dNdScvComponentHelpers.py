@@ -6,6 +6,7 @@ from SNVReviewers.AppComponents.utils import reformat_numbers
 import pandas as pd
 import numpy as np
 from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot, gen_table_conditional_styling
+from SNVReviewers.AppComponents.utils import get_gene_description
 
 RESULTS_DROPDOWN_OPTIONS = [
     {'label':'All', 'value': 'all'},
@@ -67,6 +68,7 @@ DNDS_SUMMARY_DROPDOWM_LABEL = 'List genes significant with:'
 NO_CONDITIONAL_STYLING = []
 NO_TABLE_HEADING_LABEL = ""
 COMPARISON_TABLE_HEADING_LABEL = "Significant with "
+URL_TEXT = "Learn more about "
 
 # dNdScv dataframe and plot generation
 def gen_dndscv_results_app_component(
@@ -88,6 +90,10 @@ def gen_dndscv_results_app_component(
     comparison_table = pd.DataFrame().to_dict("records")
     selected_idx = report_table_selected_row[0]
     gene_name = dnd_df_plot.loc[selected_idx, "GENE"]
+    # gene_id = dnd_df_plot.loc[selected_idx, "GENE_ID"]
+    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
+    gene_id = 10 # DEBUGGING REMOVE LATER!!
+    gene_description = get_gene_description(gene_id)
 
     url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
 
@@ -171,7 +177,9 @@ def gen_dndscv_results_app_component(
             DNDS_RESULTS_DROPDOWM_LABEL,
             num_gene_values,
 
-            # url,
+            url,
+            URL_TEXT + f"{gene_name}",
+            gene_description,
 
             debugging
         ]
@@ -196,8 +204,13 @@ def gen_dndscv_comparison_app_component(
     comparison_fig = go.Figure()
     empty_result_table = pd.DataFrame().to_dict('records')
     empty_summary_table = pd.DataFrame().to_dict("records")
-    selected_idx = 0 # DEBUGGING REMOVE LATER!!!
+    selected_idx = report_table_selected_row[0] 
     gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
+    # gene_id = dnd_df_comparison.loc[selected_idx, "GENE_ID"]
+    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
+    gene_id = 10 # DEBUGGING REMOVE LATER!!
+    gene_description = get_gene_description(gene_id)
+
     url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
 
     comparison_fig, [df_plot1, df_plot2, df_plot3], df_significance = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
@@ -290,7 +303,9 @@ def gen_dndscv_comparison_app_component(
         DNDS_COMPARISON_DROPDOWM_LABEL,
         dropdown_menu_value,
 
-        # url, 
+        url, 
+        URL_TEXT + f"{gene_name}",
+        gene_description,
 
         debugging
     ]
@@ -310,8 +325,13 @@ def gen_dndscv_summary_app_component(
     empty_figure = go.Figure()
     empty_comparison_table = pd.DataFrame().to_dict("records")
     summary_table1 = pd.DataFrame().to_dict('records')
-    selected_idx = 0 # DEBUGGING REMOVE LATER!!!
+    selected_idx = report_table_selected_row[0] 
     gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
+    # gene_id = dnd_df_comparison.loc[selected_idx, "GENE_ID"]
+    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
+    gene_id = 10 # DEBUGGING REMOVE LATER!!
+    gene_description = get_gene_description(gene_id)
+
     url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
 
     df_summary_tables = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
@@ -396,7 +416,9 @@ def gen_dndscv_summary_app_component(
         DNDS_SUMMARY_DROPDOWM_LABEL,
         dropdown_menu_value,
 
-        # url,
+        url,
+        URL_TEXT + f"{gene_name}",
+        gene_description,
 
         debugging
     ]

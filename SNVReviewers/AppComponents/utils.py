@@ -4,6 +4,10 @@ import numpy as np
 import scipy as sp
 from statsmodels.stats.multitest import fdrcorrection
 import plotly.express as px
+import json
+import logging
+from urllib.request import urlopen
+import requests
 
 # minimum number of rows (genes) to display in the table
 n_rows_min = 50
@@ -227,6 +231,16 @@ def nb_pvalue_uniform_midp(k, alpha, p):
     """ Calculate the upper tail p-value for negative binomial distribution using uniform approximation and a random draw.
     """
     return np.random.uniform(size=k.shape) * sp.stats.nbinom.pmf(k, alpha, p) + sp.special.betainc(k + 1, alpha, 1 - p)
+
+
+LOGGER = logging.getLogger("targdiscportal.functions")
+
+def get_gene_description(entrez_id):
+    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gene&amp;id={entrez_id}&amp;retmode=json"
+    LOGGER.info(f"Querying {url} for gene summary")
+    data = json.load(urlopen(url))
+    summary = data["result"][str(entrez_id)]["summary"]
+    return summary
 
 def gen_table_conditional_styling(column_name, significant_indices):
     """
