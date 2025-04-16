@@ -328,15 +328,16 @@ def gen_dNdScv_app_component_layout():
 
                 html.Div(
                     children=[
-                    dbc.Label(children="GENE Summary PLACEHOLDER", id="gene-description-box"),
-                    # 
-                    dcc.Link(
-                        "Learn more about selected Gene", 
-                        href="",
-                        target="_blank",  # Open link in a new tab
-                        id="gene-summary-link",
-                        style={'fontSize': '20px', 'color': 'blue'}
-                    )
+                        dbc.Label(children=""),
+                        dbc.Label(children="", id="gene-description-box"),
+                        # 
+                        dcc.Link(
+                            "Learn more about selected Gene", 
+                            href="",
+                            target="_blank",  # Open link in a new tab
+                            id="gene-summary-link",
+                            style={'fontSize': '20px', 'color': 'blue'}
+                        )
                     ]
                 ),
                 # Graphs below the coding region table

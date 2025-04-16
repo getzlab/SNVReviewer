@@ -263,12 +263,37 @@ def gen_table_conditional_styling(column_name, significant_indices):
     
     return style_data_conditional
 
+def gen_gene_info(df, table_selected_row):
+    """
+    """
+    selected_idx = table_selected_row[0] 
+
+    gene_name = df.loc[selected_idx, "GENE"]
+    try:
+        gene_id = int(df.loc[selected_idx, "GENE_ID"])
+
+        if gene_id is None:
+            gene_id = 10 # DEFAULT GENE ID VALUE
+    except:
+        print("GENE_ID not in dataframe")
+        gene_id = 10 
+
+    gene_description = get_gene_description(gene_id)
+
+    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
+
+    return gene_name, gene_description, url
+
+
 # DIG REPORT Coding Region functions
 
 # 3 prime utr report results
 def generate_dig_non_coding_region_dataframe(
                                 path_to_dig_results, 
                                     ):
+    """
+    
+    """
     # Driver gene lists
     cgc_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/cancer_gene_census_2024_06_20.tsv"
     pancan_list_path = "gs://getzlab-workflows-reference_files-oa/hg19/dig/pancanatlas_genes.tsv"
@@ -1091,8 +1116,10 @@ def generate_dnds_dataframe(
     df_merged = pd.concat([df_out, df_ci], axis=1)
     # global dNdS values
     df_global = pd.read_csv(path_dnds_global, sep='\t')
+    df_merged = df_merged.copy().reset_index().rename(columns={'index': 'GENE'})
+
     # dataframe that will be plotted in a table format
-    df_plot = df_merged.copy().reset_index().rename(columns={'index': 'GENE'})
+    df_plot = df_merged.copy() #.reset_index().rename(columns={'index': 'GENE'})
     df_plot['RANK'] = df_plot.index + 1
     # adding indicator of genes being part of the CGC or PanCan list
     df_plot['CGC'] = df_plot.GENE.isin(cgc_list)

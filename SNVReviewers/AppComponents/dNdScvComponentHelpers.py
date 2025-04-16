@@ -6,7 +6,7 @@ from SNVReviewers.AppComponents.utils import reformat_numbers
 import pandas as pd
 import numpy as np
 from SNVReviewers.AppComponents.utils import generate_dnds_report, gen_dnds_summary_table, gen_dnds_comparison_plot, gen_table_conditional_styling
-from SNVReviewers.AppComponents.utils import get_gene_description
+from SNVReviewers.AppComponents.utils import gen_gene_info
 
 RESULTS_DROPDOWN_OPTIONS = [
     {'label':'All', 'value': 'all'},
@@ -88,17 +88,8 @@ def gen_dndscv_results_app_component(
     dnd_df_global = dnd_df_global.copy()
     summary_table = pd.DataFrame().to_dict("records")
     comparison_table = pd.DataFrame().to_dict("records")
-    selected_idx = report_table_selected_row[0]
-    gene_name = dnd_df_plot.loc[selected_idx, "GENE"]
-    # gene_id = dnd_df_plot.loc[selected_idx, "GENE_ID"]
-    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
-    gene_id = 10 # DEBUGGING REMOVE LATER!!
-    gene_description = get_gene_description(gene_id)
+    gene_name, gene_description, url = gen_gene_info(dnd_df_plot, report_table_selected_row)
 
-    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
-
-
-    # ADD IN ANOTHER COLUMN FOR THAT HAS A LINK TO A GOOGLE SEARCH FOR EACH GENE
     qq_fig, fig_dnds_global, fig_dnds_mis, fig_dnds_tru, df_plot, signficant_boolean_values = generate_dnds_report(dnd_df_plot, dnd_df_merged,dnd_df_global, num_gene_values)
     signficant_idxs = np.where(dnd_df_plot["FDR"]*100000000 < 10000000)[0]
 
@@ -204,14 +195,7 @@ def gen_dndscv_comparison_app_component(
     comparison_fig = go.Figure()
     empty_result_table = pd.DataFrame().to_dict('records')
     empty_summary_table = pd.DataFrame().to_dict("records")
-    selected_idx = report_table_selected_row[0] 
-    gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
-    # gene_id = dnd_df_comparison.loc[selected_idx, "GENE_ID"]
-    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
-    gene_id = 10 # DEBUGGING REMOVE LATER!!
-    gene_description = get_gene_description(gene_id)
-
-    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
+    gene_name, gene_description, url = gen_gene_info(dnd_df_comparison, report_table_selected_row)
 
     comparison_fig, [df_plot1, df_plot2, df_plot3], df_significance = gen_dnds_comparison_plot(dnd_df_comparison, dropdown_menu_value)
 
@@ -239,6 +223,7 @@ def gen_dndscv_comparison_app_component(
     significant_idxs = np.where(((df_significance['Significant'].str.contains('both')) | (df_significance['Significant'].str.contains('only'))) )[0]
     # significant_idxs2 = np.where(~df_plot2['Significant'].str.contains('neither'))[0]
     # significant_idxs3 = np.where(~df_plot3['Significant'].str.contains('neither'))[0]
+
     debugging = f"{type(significant_idxs)}"
     column_name = 'RANK'
     comparison_table_conditional_styling1 = gen_table_conditional_styling(column_name, significant_idxs)
@@ -325,18 +310,11 @@ def gen_dndscv_summary_app_component(
     empty_figure = go.Figure()
     empty_comparison_table = pd.DataFrame().to_dict("records")
     summary_table1 = pd.DataFrame().to_dict('records')
-    selected_idx = report_table_selected_row[0] 
-    gene_name = dnd_df_comparison.loc[selected_idx, "GENE"]
-    # gene_id = dnd_df_comparison.loc[selected_idx, "GENE_ID"]
-    # CHECK TO MAKE SURE GENE_ID IS NOT NAN
-    gene_id = 10 # DEBUGGING REMOVE LATER!!
-    gene_description = get_gene_description(gene_id)
-
-    url = f"https://www.google.com/search?q={gene_name}+gene+cancer"
+    gene_name, gene_description, url = gen_gene_info(dnd_df_comparison, report_table_selected_row)
 
     df_summary_tables = gen_dnds_summary_table(dnd_df_comparison, dropdown_menu_value)
     summary_table_combined = df_summary_tables["MutSig2CV, dNdScv and DIG"]
-
+    
     print("this is dropdown_menu_value: ", dropdown_menu_value)
 
     summary_table2 = df_summary_tables[dropdown_menu_value]
